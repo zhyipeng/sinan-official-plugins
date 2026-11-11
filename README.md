@@ -18,7 +18,7 @@ make package
 /path/to/sinan/bin/sinanctl -plugins /path/to/plugins -trust-native install /path/to/sinan-official-plugins/bin/plugins/json-tool
 ```
 
-已有版本使用 `upgrade`。也可在可信插件管理界面检查并安装构建目录，显式确认原生信任。当前 UI 需要宿主以 `-plugin-ui` 启动；原生进程不是安全沙箱。草稿最大 32 KiB，保持原插件 ID，因此原有草稿和配置身份不变。
+已有版本使用 `upgrade`。也可在可信插件管理界面检查并安装构建目录，显式确认原生信任。新版宿主默认启用插件 UI（旧版宿主需使用 `-plugin-ui`），可用 `-plugin-ui=false` 显式关闭；原生进程不是安全沙箱。草稿最大 32 KiB，保持原插件 ID，因此原有草稿和配置身份不变。
 
 ## SDK 与宿主依赖
 
