@@ -1,0 +1,10 @@
+{
+  "source": "sinan",
+  "commit": "808debc91e7eb51f88c4a84e74123b8be01dfe23",
+  "files": {
+    "packages/plugin-protocol/protocol.go": "250f650d9b442e9d24eaa677615d2116bc91f2be9bdfbed56ad86b7444394f1d",
+    "packages/plugin-sdk/server.go": "8854003dca5bee2c665d0fbe4f46d202b1671b64bb91578fc2376b4006c1913e",
+    "packages/plugin-sdk/ui/index.js": "e8c8c0e1382c9bee42cdfec852cb00affcf147243d6ca359b39ad418b0550d4a",
+    "packages/plugin-sdk/ui/index.d.ts": "f8e13c96cebf199d0d49920b1a867577a0f0d555a11d47c1fca9a755162408ed"
+  }
+}
