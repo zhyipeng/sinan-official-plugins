@@ -16,6 +16,11 @@
       </div>
       <button id="clear" disabled>清空</button>
     </header>
+    <form id="query-form" class="query-bar" role="search">
+      <label for="query">this</label>
+      <input id="query" maxlength="1024" aria-label="JSON 筛选表达式" placeholder="实时筛选：.key.subkey　[0][1]　.map(x => x.val)" spellcheck="false" autocomplete="off" disabled>
+      <button id="apply-query" type="submit" disabled>筛选</button>
+    </form>
     <div id="editor" aria-label="JSON 内容"></div>
     <p id="error" role="alert" hidden></p>
     <footer>

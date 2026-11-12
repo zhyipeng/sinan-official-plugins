@@ -58,6 +58,7 @@ await build({
     'vendor-commands': '@codemirror/commands',
     'vendor-query': '@jsonquerylang/jsonquery',
     'vendor-ajv': 'ajv',
+    'vendor-acorn': 'acorn',
     'vendor-lodash': 'lodash-es',
     'vendor-jsonpath': 'jsonpath-plus',
     'vendor-jsonrepair': 'jsonrepair',

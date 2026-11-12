@@ -22,10 +22,12 @@ async function fixture(initial = '', launch = {}) {
     if (!elements.has(id)) elements.set(id, { disabled: true, hidden: true, textContent: '', handlers: {}, addEventListener(type, fn) { this.handlers[type] = fn; } });
     return elements.get(id);
   };
-  let content, props, timer, doc = { revision: 4, value: { text: initial } };
+  let content, props, now = 0, timerId = 0;
+  const timers = new Map();
+  let doc = { revision: 4, value: { text: initial } };
   let write = async (revision, value) => { assert.equal(revision, doc.revision); doc = { revision: revision + 1, value }; return doc; };
   const context = {
-    TextEncoder, setTimeout(fn) { timer = fn; }, clearTimeout() { timer = undefined; },
+    TextEncoder, setTimeout(fn, delay) { const id = ++timerId; timers.set(id, {fn, at:now+delay}); return id; }, clearTimeout(id) { timers.delete(id); },
     document: { querySelector: element, addEventListener() {} },
     createEditor(options) {
       props = options.props; content = props.content;
@@ -34,11 +36,22 @@ async function fixture(initial = '', launch = {}) {
     readLaunch: async () => structuredClone(launch), readData: async () => structuredClone(doc), writeData: (...args) => write(...args),
   };
   vm.runInNewContext(script, context); await settle();
+  async function advance(ms) {
+    const target = now + ms;
+    for (let count=0; count<100; count++) {
+      const next=[...timers].filter(([,task])=>task.at<=target).sort((a,b)=>a[1].at-b[1].at)[0];
+      if (!next) break;
+      timers.delete(next[0]); now=next[1].at; next[1].fn(); await settle();
+    }
+    now=target;
+  }
   return {
+    advance,
+    expression(value) { element('#query').value=value; element('#query').handlers.input({isComposing:false}); },
     element, text: () => content.text, doc: () => doc,
     input(text) { content = { text }; props.onChange(content); },
     click(id) { element(id).handlers.click(); },
-    async save() { timer?.(); timer = undefined; await settle(); },
+    async save() { await advance(700); },
     writer(fn) { write = fn; },
     settle,
   };
@@ -92,4 +105,49 @@ test('显式空输入与普通打开区分，且不覆盖旧草稿', async () =>
   const app = await fixture('{"old":true}', { commandId: 'open', input: '' });
   assert.equal(app.text(), '');
   await app.save(); assert.equal(app.doc().value.text, '{"old":true}');
+});
+
+test('筛选直接应用并保存，筛选错误保留当前文档', async () => {
+  const app = await fixture('{"items":[{"val":1},{"val":2}]}');
+  app.element('#query').value='.items.filter(x => x.val > 1).map(x => x.val)';
+  app.element('#query-form').handlers.submit({preventDefault(){}});
+  assert.equal(app.text(), '[\n  2\n]');
+  await app.save();assert.equal(app.doc().value.text,app.text());
+  const before=app.text();
+  app.element('#query').value='this.constructor';
+  app.element('#query-form').handlers.submit({preventDefault(){}});
+  assert.equal(app.text(),before);assert.equal(app.element('#error').hidden,false);
+});
+
+test('实时筛选防抖，修改表达式始终从原文计算，清空精确恢复原文', async () => {
+  const original = '{"items":[{"val":1},{"val":2},{"val":3}]}';
+  const app = await fixture(original);
+  app.expression('.items.filter(x => x.val > 1)');
+  await app.advance(179); assert.equal(app.text(), original);
+  await app.advance(1); assert.equal(app.text(), '[\n  {\n    "val": 2\n  },\n  {\n    "val": 3\n  }\n]');
+  app.expression('.items.map(x => x.val)'); await app.advance(180);
+  assert.equal(app.text(), '[\n  1,\n  2,\n  3\n]');
+  app.expression(''); assert.equal(app.text(), original);
+});
+test('快速输入只应用最新表达式，无效片段保留上次成功结果', async () => {
+  const app = await fixture('{"a":1,"b":2}');
+  app.expression('.a'); await app.advance(100);
+  app.expression('.b'); await app.advance(179); assert.equal(app.text(), '{"a":1,"b":2}');
+  await app.advance(1); assert.equal(app.text(), '2');
+  app.expression('.b['); await app.advance(180); assert.equal(app.text(), '2');
+  app.expression('.a'); await app.advance(180); assert.equal(app.text(), '1');
+});
+test('直接编辑或工具操作结束筛选，过时定时器不会覆盖新文档', async () => {
+  const app = await fixture('{"a":1}');
+  app.expression('.a'); app.input('{"new":true}'); await app.advance(200);
+  assert.equal(app.text(), '{"new":true}'); assert.equal(app.element('#query').value, '');
+  app.expression('.new'); await app.advance(180); assert.equal(app.text(), 'true');
+  app.click('#clear'); await app.advance(200); assert.equal(app.text(), '');
+  app.expression(''); assert.equal(app.text(), '');
+});
+test('输入法组合期间不筛选，组合结束后应用', async () => {
+  const app = await fixture('{"中文":123}');
+  app.element('#query').handlers.compositionstart();
+  app.expression('this["中文"]'); await app.advance(400); assert.equal(app.text(), '{"中文":123}');
+  app.element('#query').handlers.compositionend(); await app.advance(180); assert.equal(app.text(), '123');
 });

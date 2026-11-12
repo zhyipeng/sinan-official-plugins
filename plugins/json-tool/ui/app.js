@@ -1,5 +1,6 @@
 import { createJSONEditor } from 'vanilla-jsoneditor';
 import { ready, readData, writeData, readLaunch } from '../../../third_party/sinan/packages/plugin-sdk/ui/index.js';
+import { queryJSON } from './query.js';
 import { contentText, formatJSON, parser } from './format.js';
 
 const status = document.querySelector('#status');
@@ -8,10 +9,13 @@ const reload = document.querySelector('#reload');
 const format = document.querySelector('#format');
 const compact = document.querySelector('#compact');
 const clear = document.querySelector('#clear');
+const query = document.querySelector('#query');
+const applyQuery = document.querySelector('#apply-query');
 let revision = 0, generation = 0, saved = 0, timer, saving = false, blocked = false, loading = true;
+let querySource, queryTimer, composingQuery = false;
 
 function failure(message) { error.textContent = message; error.hidden = !message; }
-function controls() { format.disabled = compact.disabled = clear.disabled = loading; }
+function controls() { format.disabled = compact.disabled = clear.disabled = query.disabled = applyQuery.disabled = loading; }
 function size() {
   document.querySelector('#size').textContent = `${new TextEncoder().encode(contentText(editor.get())).length.toLocaleString()} 字节`;
 }
@@ -21,7 +25,7 @@ const editor = createJSONEditor({
     content: { text: '' }, mode: 'text', parser, indentation: 2,
     mainMenuBar: false, navigationBar: false, statusBar: true,
     askToFormat: false, readOnly: true, ariaLabel: 'JSON 内容',
-    onChange: () => { if (!loading) changed(); },
+    onChange: () => { if (!loading) { resetQuery(); changed(); } },
     onError: reason => failure(reason.message),
   }
 });
@@ -49,7 +53,7 @@ function changed() {
 }
 async function load(useLaunch = false) {
   if (saving) return;
-  clearTimeout(timer); loading = true; controls();
+  resetQuery(); clearTimeout(timer); loading = true; controls();
   editor.updateProps({ readOnly: true }); failure(''); status.textContent = '正在读取草稿…';
   const [draftResult, launchResult] = await Promise.allSettled([
     readData(), useLaunch ? readLaunch() : Promise.resolve({})
@@ -75,6 +79,7 @@ async function load(useLaunch = false) {
 }
 function run(isCompact) {
   if (loading) return;
+  resetQuery();
   try {
     const text = formatJSON(contentText(editor.get()), isCompact);
     editor.update({ text }); changed(); editor.focus();
@@ -82,11 +87,52 @@ function run(isCompact) {
 }
 format.addEventListener('click', () => run(false));
 compact.addEventListener('click', () => run(true));
-clear.addEventListener('click', () => { editor.update({ text: '' }); changed(); editor.focus(); });
+clear.addEventListener('click', () => { resetQuery(); editor.update({ text: '' }); changed(); editor.focus(); });
 reload.addEventListener('click', () => { if (!loading && !saving) void load(); });
 document.addEventListener('keydown', event => {
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && !event.isComposing) {
-    event.preventDefault(); run(event.shiftKey);
+    event.preventDefault();
+    if (event.target === query) applyQueryExpression(true); else run(event.shiftKey);
   }
 }, true);
+// A live query always reads the frozen pre-filter document. Editor edits,
+// undo/redo and explicit tool actions commit the current view as a new document.
+function resetQuery() {
+  clearTimeout(queryTimer); queryTimer = undefined;
+  querySource = undefined; query.value = ''; composingQuery = false;
+}
+function applyQueryExpression(focus = false) {
+  clearTimeout(queryTimer); queryTimer = undefined;
+  if (loading || composingQuery) return;
+  const expression = query.value;
+  if (!expression.trim()) {
+    if (querySource !== undefined) {
+      const original = querySource; querySource = undefined;
+      if (contentText(editor.get()) !== original) { editor.update({ text: original }); changed(); }
+    }
+    failure('');
+    return;
+  }
+  querySource ??= contentText(editor.get());
+  try {
+    const output = queryJSON(querySource, expression);
+    if (contentText(editor.get()) !== output) { editor.update({ text: output }); changed(); }
+    failure('');
+    if (focus) editor.focus();
+  } catch (reason) { failure(reason.message); }
+}
+function scheduleQuery(event) {
+  clearTimeout(queryTimer); queryTimer = undefined;
+  if (loading || composingQuery || event?.isComposing) return;
+  failure('');
+  if (!query.value.trim()) { applyQueryExpression(); return; }
+  querySource ??= contentText(editor.get());
+  queryTimer = setTimeout(() => applyQueryExpression(), 180);
+}
+query.addEventListener('input', scheduleQuery);
+query.addEventListener('compositionstart', () => { composingQuery = true; clearTimeout(queryTimer); });
+query.addEventListener('compositionend', () => { composingQuery = false; scheduleQuery(); });
+document.querySelector('#query-form').addEventListener('submit', event => {
+  event.preventDefault(); applyQueryExpression(true);
+});
 ready(); void load(true);

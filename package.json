@@ -8,10 +8,10 @@
   },
   "dependencies": {
     "lossless-json": "4.3.3",
-    "vanilla-jsoneditor": "3.13.0"
+    "vanilla-jsoneditor": "3.13.0",
+    "acorn": "8.19.0"
   },
   "devDependencies": {
-    "acorn": "8.19.0",
     "esbuild": "0.28.2"
   }
 }
