@@ -1,7 +1,29 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JSON 格式化</title><link rel="stylesheet" href="style.css"></head><body>
-<main>
- <header><div class="actions"><button id="format" class="primary" disabled>格式化</button><button id="compact" disabled>压缩</button></div><button id="clear" disabled>清空</button></header>
- <textarea id="editor" aria-label="JSON 内容" placeholder="粘贴 JSON…" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" disabled></textarea>
- <footer><span id="status" role="status">正在读取草稿…</span><span id="size">0 字节</span><button id="reload" hidden>载入已存草稿</button></footer>
- <p id="error" role="alert" hidden></p>
-</main><script type="module" src="app.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>JSON 工具</title>
+  <link rel="stylesheet" href="editor.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div class="actions">
+        <button id="format" class="primary" disabled title="⌘/Ctrl + Enter">格式化</button>
+        <button id="compact" disabled title="⌘/Ctrl + Shift + Enter">压缩</button>
+      </div>
+      <button id="clear" disabled>清空</button>
+    </header>
+    <div id="editor" aria-label="JSON 内容"></div>
+    <p id="error" role="alert" hidden></p>
+    <footer>
+      <span id="status" role="status">正在读取草稿…</span>
+      <button id="reload" hidden>载入已存草稿</button>
+      <span id="size">0 字节</span>
+    </footer>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,17 +1,46 @@
 {
- "id":"tools.json",
- "name":"JSON 格式化",
- "version":"0.1.0",
- "apiVersion":"1",
- "runtime":{"kind":"process","entry":"backend/plugin"},
- "contributes":{
-  "commands":[
-   {"id":"open","title":"JSON 格式化","keywords":["JSON","格式化","压缩"],"uiView":"editor"},
-   {"id":"format","title":"格式化","searchOnly":true},
-   {"id":"compact","title":"压缩","searchOnly":true}
-  ],
-  "uiViews":[{"id":"editor","entry":"index.html","bridgeVersion":"2","commands":["format","compact"],"permissions":["storage"]}]
- },
- "permissions":[],
- "activationEvents":["onCommand:open","onCommand:format","onCommand:compact"]
+  "id": "tools.json",
+  "name": "JSON 工具",
+  "version": "0.3.0",
+  "apiVersion": "1",
+  "runtime": {
+    "kind": "declarative"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "open",
+        "title": "JSON 工具",
+        "keywords": [
+          "JSON",
+          "格式化",
+          "压缩"
+        ],
+        "uiView": "editor",
+        "inputMatchers": [
+          {
+            "kind": "json",
+            "jsonTypes": [
+              "object",
+              "array"
+            ]
+          }
+        ]
+      }
+    ],
+    "uiViews": [
+      {
+        "id": "editor",
+        "entry": "index.html",
+        "bridgeVersion": "2",
+        "permissions": [
+          "storage"
+        ]
+      }
+    ]
+  },
+  "permissions": [],
+  "activationEvents": [
+    "onCommand:open"
+  ]
 }

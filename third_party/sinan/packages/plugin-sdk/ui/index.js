@@ -13,3 +13,6 @@ function call(request) {
 export function execute(commandId,input) { return call({method:'command.execute',commandId,input}); }
 export function readData() { return call({method:'storage.get'}); }
 export function writeData(revision,value) { return call({method:'storage.put',revision,value}); }
+
+// Only the current view's explicit opening input; never the live search field.
+export function readLaunch() { return call({method:'launch.get'}); }
