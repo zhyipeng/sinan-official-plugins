@@ -45,3 +45,9 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 这是 JSON 数据表达式子集，使用 Acorn 解析并解释，不执行任意 JavaScript；没有 eval、Function、全局对象、任意函数、赋值、循环或语句块。表达式最多 1024 字节，源文档和结果各最多 1 MiB，求值及输出检查共用 100,000 步预算，嵌套最多 48 层。图片、宿主桥和 CSP 无变更。
 
 插件图标通过 manifest 的可选 `icon` 声明包内文件；JSON 工具的 `icon.svg` 随构建输出。需要支持该字段的新版 Sinan 宿主。缺少图标时宿主显示插件名首字。
+
+## 发布到插件商店
+
+执行 `make test`、`make package`，生成 `dist/tools.json-<版本>-darwin-arm64.zip` 与 `darwin-amd64.zip`、摘要文件和 `assets.json`。插件为纯前端，两种架构包的内容相同；当前仅登记已有 HTML 承载能力的 macOS。需要支持 CSSStyleSheet 的 WebKit（Safari 16.4+）。
+
+提交源码后，以清单版本创建 `v<版本>` 标签，在 GitHub Release 上传这两份 ZIP 与摘要。不要覆盖已发布版本的资产。取得真实 Release ID、Asset ID 后，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/tools.json/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。本仓库当前尚无自动发布工作流。
