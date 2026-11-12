@@ -76,6 +76,7 @@ for (const file of ['index.html', 'style.css']) {
   await copyFile(path.join(root, 'plugins/json-tool/ui', file), path.join(out, 'ui', file));
 }
 await copyFile(path.join(root, 'plugins/json-tool/manifest.json'), path.join(out, 'manifest.json'));
+await copyFile(path.join(root, 'plugins/json-tool/icon.svg'), path.join(out, 'icon.svg'));
 let total = 0, count = 0;
 for (const name of await readdir(path.join(out, 'ui'))) {
   const size = (await stat(path.join(out, 'ui', name))).size;
