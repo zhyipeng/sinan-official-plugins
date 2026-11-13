@@ -58,16 +58,16 @@ main { height: 100vh; display: flex; flex-direction: column; background: var(--s
 header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   min-height: 44px;
-  padding: 6px 16px;
+  padding: 6px 12px 6px 16px;
   background: var(--sinan-background, #f4f6fa);
   border-bottom: 1px solid var(--sinan-line, #dfe5f0);
 }
 
-.actions { display: flex; gap: 6px; }
+.actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-header button, footer button {
+footer button {
   border: 1px solid var(--sinan-line, #dfe5f0);
   background: var(--sinan-surface, #ffffff);
   color: inherit;
@@ -80,24 +80,49 @@ header button, footer button {
   transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out), transform 100ms var(--ease-out);
 }
 
-header button:hover:not(:disabled), footer button:hover:not(:disabled) {
+footer button:hover:not(:disabled) {
   background: var(--sinan-hover, #eaeff9);
 }
 
-header button:active:not(:disabled), footer button:active:not(:disabled) {
+footer button:active:not(:disabled) {
   transform: scale(0.985);
 }
 
-header .primary {
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--sinan-line, #dfe5f0);
+  border-radius: 7px;
+  background: var(--sinan-surface, #ffffff);
+  color: var(--sinan-muted, #5c687d);
+  cursor: pointer;
+  transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out), color 140ms var(--ease-out), transform 100ms var(--ease-out);
+}
+
+.icon-button svg { display: block; width: 16px; height: 16px; }
+
+.icon-button:hover:not(:disabled) {
+  background: var(--sinan-hover, #eaeff9);
+  color: var(--sinan-text, #161d2b);
+}
+
+.icon-button:active:not(:disabled) { transform: scale(0.94); }
+
+.icon-button.primary {
   background: var(--sinan-accent, #2558e8);
   color: var(--sinan-on-accent, #ffffff);
   border-color: transparent;
-  font-weight: 560;
   box-shadow: 0 1px 2px rgba(37, 88, 232, 0.16);
 }
 
-header .primary:hover:not(:disabled) {
+.icon-button.primary:hover:not(:disabled) {
   background: var(--sinan-accent-hover, #1d48c8);
+  color: var(--sinan-on-accent, #ffffff);
 }
 
 button:disabled { opacity: 0.42; cursor: default; }
@@ -149,14 +174,17 @@ footer {
 }
 
 .query-bar {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--sinan-line, #dfe5f0);
+  min-height: 30px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--sinan-line, #dfe5f0);
+  border-radius: 8px;
   background: var(--sinan-surface, #ffffff);
-  transition: box-shadow 140ms var(--ease-out);
+  transition: border-color 140ms var(--ease-out), box-shadow 140ms var(--ease-out);
 }
 
 .query-bar label {
@@ -172,7 +200,7 @@ footer {
 .query-bar input {
   flex: 1;
   min-width: 0;
-  padding: 8px 0;
+  padding: 6px 0;
   border: none;
   outline: none;
   color: var(--sinan-text, #161d2b);
@@ -181,21 +209,23 @@ footer {
 }
 
 .query-bar input::placeholder { color: var(--sinan-placeholder, #8793a8); }
-.query-bar:focus-within { box-shadow: inset 0 -2px var(--sinan-accent, #2558e8); }
 
-.query-bar button {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--sinan-accent, #2558e8);
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 550;
-  cursor: pointer;
+.query-bar:focus-within {
+  border-color: color-mix(in srgb, var(--sinan-accent, #2558e8) 55%, var(--sinan-line, #dfe5f0));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sinan-accent, #2558e8) 16%, transparent);
 }
 
-.query-bar button:hover:not(:disabled) {
+.query-bar .icon-button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--sinan-muted, #5c687d);
+}
+
+.query-bar .icon-button svg { width: 15px; height: 15px; }
+
+.query-bar .icon-button:hover:not(:disabled) {
   background: var(--sinan-hover, #eaeff9);
+  color: var(--sinan-accent, #2558e8);
 }

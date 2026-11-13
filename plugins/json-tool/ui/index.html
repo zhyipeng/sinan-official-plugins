@@ -10,18 +10,38 @@
 </head>
 <body>
   <main>
-    <header>
-      <div class="actions">
-        <button id="format" class="primary" disabled title="⌘/Ctrl + Enter">格式化</button>
-        <button id="compact" disabled title="⌘/Ctrl + Shift + Enter">压缩</button>
+    <header class="toolbar">
+      <form id="query-form" class="query-bar" role="search">
+        <label for="query">this</label>
+        <input id="query" maxlength="1024" aria-label="JSON 筛选表达式" placeholder="实时筛选：.key.subkey　[0][1]　.map(x => x.val)" spellcheck="false" autocomplete="off" disabled>
+        <button id="apply-query" type="submit" class="icon-button filter-action" disabled title="筛选（⌘/Ctrl + Enter）" aria-label="筛选">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2.5 3.2h11L9.4 8.1v4.2L6.6 13.6V8.1z"/>
+          </svg>
+        </button>
+      </form>
+      <div class="actions" role="group" aria-label="操作">
+        <button id="format" class="icon-button primary" disabled title="格式化（⌘/Ctrl + Enter）" aria-label="格式化">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5.5 2.75c-1.1 0-1.25.85-1.25 1.85v1.3c0 1-.45 1.35-1.4 1.6.95.25 1.4.6 1.4 1.6v1.3c0 1 .15 1.85 1.25 1.85"/>
+            <path d="M10.5 2.75c1.1 0 1.25.85 1.25 1.85v1.3c0 1 .45 1.35 1.4 1.6-.95.25-1.4.6-1.4 1.6v1.3c0 1-.15 1.85-1.25 1.85"/>
+          </svg>
+        </button>
+        <button id="compact" class="icon-button" disabled title="压缩（⌘/Ctrl + Shift + Enter）" aria-label="压缩">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2.5 8h3.2M5.7 8 4.2 6.5M5.7 8 4.2 9.5M13.5 8H10.3M10.3 8l1.5-1.5M10.3 8l1.5 1.5"/>
+          </svg>
+        </button>
+        <button id="clear" class="icon-button" disabled title="清空" aria-label="清空">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2.6 4.3h10.8"/>
+            <path d="M6.2 4.3V3.1c0-.5.4-.9.9-.9h1.8c.5 0 .9.4.9.9v1.2"/>
+            <path d="M4 4.3l.6 8.2c0 .6.5 1.1 1.1 1.1h4.6c.6 0 1.1-.5 1.1-1.1l.6-8.2"/>
+            <path d="M6.6 7v4M9.4 7v4"/>
+          </svg>
+        </button>
       </div>
-      <button id="clear" disabled>清空</button>
     </header>
-    <form id="query-form" class="query-bar" role="search">
-      <label for="query">this</label>
-      <input id="query" maxlength="1024" aria-label="JSON 筛选表达式" placeholder="实时筛选：.key.subkey　[0][1]　.map(x => x.val)" spellcheck="false" autocomplete="off" disabled>
-      <button id="apply-query" type="submit" disabled>筛选</button>
-    </form>
     <div id="editor" aria-label="JSON 内容"></div>
     <p id="error" role="alert" hidden></p>
     <footer>

@@ -4,7 +4,7 @@ Sinan 官方插件源码仓库。
 
 ## 包含插件
 
-- **JSON 工具**（`tools.json`，0.4.1）：基于 `vanilla-jsoneditor` 的纯前端插件，当前先提供 JSON 格式化、压缩、语法高亮、撤销/重做及错误位置提示。数值由 `lossless-json` 处理，保留大整数、小数精度与指数写法；重复键会报错，避免静默丢失数据。
+- **JSON 工具**（`tools.json`，0.4.2）：基于 `vanilla-jsoneditor` 的纯前端插件，当前先提供 JSON 格式化、压缩、语法高亮、撤销/重做及错误位置提示。数值由 `lossless-json` 处理，保留大整数、小数精度与指数写法；重复键会报错，避免静默丢失数据。
 
 ## 开发与构建
 
@@ -16,7 +16,7 @@ make test
 make package
 ```
 
-构建目录为 `bin/plugins/json-tool`，平台无关 ZIP 为 `dist/json-tool-0.4.1-universal.zip`，旁边生成 SHA-256 文件。通过司南插件管理或 CLI 安装、升级；构建本身不修改已有安装，不发布商店版本。
+构建目录为 `bin/plugins/json-tool`，macOS ZIP 为 `dist/tools.json-0.4.2-darwin-arm64.zip` 与 `dist/tools.json-0.4.2-darwin-amd64.zip`，各自生成 SHA-256 文件。通过司南插件管理或 CLI 安装、升级；构建本身不修改已有安装，不发布商店版本。
 
 ## 使用
 
