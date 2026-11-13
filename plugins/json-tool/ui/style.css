@@ -1,82 +1,201 @@
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
-  color: var(--sinan-text, #253047);
-  background: var(--sinan-surface, #fff);
-  --jse-font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-  --jse-font-family-mono: "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light dark;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "SF Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  color: var(--sinan-text, #161d2b);
+  background: var(--sinan-surface, #ffffff);
+  --jse-font-family: var(--font-sans);
+  --jse-font-family-mono: var(--font-mono);
   --jse-font-size: 13px;
-  --jse-theme-color: var(--sinan-accent, #315ed8);
-  --jse-theme-color-highlight: var(--sinan-accent-hover, #264fc0);
-  --jse-background-color: var(--sinan-surface, #fff);
-  --jse-text-color: var(--sinan-text, #253047);
-  --jse-value-color: var(--sinan-text, #253047);
+  --jse-theme-color: var(--sinan-accent, #2558e8);
+  --jse-theme-color-highlight: var(--sinan-accent-hover, #1d48c8);
+  --jse-background-color: var(--sinan-surface, #ffffff);
+  --jse-text-color: var(--sinan-text, #161d2b);
+  --jse-value-color: var(--sinan-text, #161d2b);
   /* Text mode inherits this color for braces, commas and colons. */
-  --jse-delimiter-color: var(--sinan-text, #253047);
+  --jse-delimiter-color: var(--sinan-text, #161d2b);
   --jse-main-border: none;
-  --jse-panel-background: var(--sinan-background, #f6f7fb);
-  --jse-panel-color: var(--sinan-muted, #67738a);
-  --jse-panel-color-readonly: var(--sinan-text, #253047);
-  --jse-active-line-background-color: var(--sinan-hover, #eaf0fc);
-  --jse-search-match-color: var(--sinan-selected, #e4ebfc);
-  --jse-search-match-active-color: var(--sinan-selected, #e4ebfc);
-  --jse-search-match-active-outline: 1px solid var(--sinan-accent, #315ed8);
-  --jse-search-match-background-color: var(--sinan-hover, #eaf0fc);
-  --jse-panel-border: 1px solid var(--sinan-line, #e1e5ee);
-  --jse-panel-background-border: 1px solid var(--sinan-line, #e1e5ee);
-  --jse-selection-background-color: var(--sinan-selected, #e4ebfc);
-  --jse-selection-background-inactive-color: var(--sinan-hover, #eaf0fc);
-  --jse-error-color: var(--sinan-error, #ac3f43);
-  --jse-warning-color: var(--sinan-warning, #a46522);
-  --jse-tooltip-background: var(--sinan-background, #f6f7fb);
-  --jse-tooltip-color: var(--sinan-text, #253047);
-  --jse-tooltip-border: 1px solid var(--sinan-line, #e1e5ee);
-  --jse-context-menu-background: var(--sinan-surface, #fff);
-  --jse-context-menu-color: var(--sinan-text, #253047);
-  --jse-context-menu-background-highlight: var(--sinan-hover, #eaf0fc);
-  --jse-modal-background: var(--sinan-surface, #fff);
-  --jse-modal-code-background: var(--sinan-background, #f6f7fb);
-  --jse-input-background: var(--sinan-surface, #fff);
-  --jse-input-color: var(--sinan-text, #253047);
-  --jse-input-border: 1px solid var(--sinan-line, #e1e5ee);
-  --jse-key-color: var(--sinan-accent, #315ed8);
-  --jse-value-color-string: var(--sinan-text, #253047);
-  --jse-value-color-number: var(--sinan-warning, #a46522);
-  --jse-value-color-boolean: var(--sinan-accent, #315ed8);
-  --jse-value-color-null: var(--sinan-muted, #67738a);
+  --jse-panel-background: var(--sinan-background, #f4f6fa);
+  --jse-panel-color: var(--sinan-muted, #5c687d);
+  --jse-panel-color-readonly: var(--sinan-text, #161d2b);
+  --jse-active-line-background-color: var(--sinan-hover, #eaeff9);
+  --jse-search-match-color: var(--sinan-selected, #e1eafc);
+  --jse-search-match-active-color: var(--sinan-selected, #e1eafc);
+  --jse-search-match-active-outline: 1px solid var(--sinan-accent, #2558e8);
+  --jse-search-match-background-color: var(--sinan-hover, #eaeff9);
+  --jse-panel-border: 1px solid var(--sinan-line, #dfe5f0);
+  --jse-panel-background-border: 1px solid var(--sinan-line, #dfe5f0);
+  --jse-selection-background-color: var(--sinan-selected, #e1eafc);
+  --jse-selection-background-inactive-color: var(--sinan-hover, #eaeff9);
+  --jse-error-color: var(--sinan-error, #b8323a);
+  --jse-warning-color: var(--sinan-warning, #a86214);
+  --jse-tooltip-background: var(--sinan-background, #f4f6fa);
+  --jse-tooltip-color: var(--sinan-text, #161d2b);
+  --jse-tooltip-border: 1px solid var(--sinan-line, #dfe5f0);
+  --jse-context-menu-background: var(--sinan-surface, #ffffff);
+  --jse-context-menu-color: var(--sinan-text, #161d2b);
+  --jse-context-menu-background-highlight: var(--sinan-hover, #eaeff9);
+  --jse-modal-background: var(--sinan-surface, #ffffff);
+  --jse-modal-code-background: var(--sinan-background, #f4f6fa);
+  --jse-input-background: var(--sinan-surface, #ffffff);
+  --jse-input-color: var(--sinan-text, #161d2b);
+  --jse-input-border: 1px solid var(--sinan-line, #dfe5f0);
+  --jse-key-color: var(--sinan-accent, #2558e8);
+  --jse-value-color-string: var(--sinan-text, #161d2b);
+  --jse-value-color-number: var(--sinan-warning, #a86214);
+  --jse-value-color-boolean: var(--sinan-accent, #2558e8);
+  --jse-value-color-null: var(--sinan-muted, #5c687d);
 }
-* { box-sizing: border-box; }
+
+:where(*, *::before, *::after) { box-sizing: border-box; }
 body { margin: 0; }
-main { height: 100vh; display: flex; flex-direction: column; }
-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--sinan-line, #e1e5ee); }
-.actions { display: flex; gap: 8px; }
-header button, footer button { border: 1px solid var(--sinan-line, #e1e5ee); background: var(--sinan-surface, #fff); color: inherit; border-radius: 6px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; }
-header button:hover, footer button:hover { background: var(--sinan-hover, #eaf0fc); }
-header .primary { background: var(--sinan-accent, #315ed8); color: var(--sinan-on-accent, #fff); border-color: transparent; }
-header .primary:hover { background: var(--sinan-accent-hover, #264fc0); }
-button:disabled { opacity: .5; cursor: default; }
-button:focus-visible { outline: 2px solid var(--sinan-accent, #315ed8); outline-offset: 2px; }
+main { height: 100vh; display: flex; flex-direction: column; background: var(--sinan-surface, #ffffff); }
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 6px 16px;
+  background: var(--sinan-background, #f4f6fa);
+  border-bottom: 1px solid var(--sinan-line, #dfe5f0);
+}
+
+.actions { display: flex; gap: 6px; }
+
+header button, footer button {
+  border: 1px solid var(--sinan-line, #dfe5f0);
+  background: var(--sinan-surface, #ffffff);
+  color: inherit;
+  border-radius: 7px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out), transform 100ms var(--ease-out);
+}
+
+header button:hover:not(:disabled), footer button:hover:not(:disabled) {
+  background: var(--sinan-hover, #eaeff9);
+}
+
+header button:active:not(:disabled), footer button:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+header .primary {
+  background: var(--sinan-accent, #2558e8);
+  color: var(--sinan-on-accent, #ffffff);
+  border-color: transparent;
+  font-weight: 560;
+  box-shadow: 0 1px 2px rgba(37, 88, 232, 0.16);
+}
+
+header .primary:hover:not(:disabled) {
+  background: var(--sinan-accent-hover, #1d48c8);
+}
+
+button:disabled { opacity: 0.42; cursor: default; }
+button:focus-visible { outline: 2px solid var(--sinan-accent, #2558e8); outline-offset: -2px; }
+
 #editor { flex: 1; min-height: 0; overflow: hidden; }
-footer { min-height: 36px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 16px; border-top: 1px solid var(--sinan-line, #e1e5ee); font-size: 12px; color: var(--sinan-muted, #67738a); }
-#size { margin-left: auto; }
-#error { margin: 0; max-height: 90px; overflow: auto; overflow-wrap: anywhere; padding: 8px 16px; background: var(--sinan-error-background, #fff0f0); color: var(--sinan-error, #ac3f43); font-size: 13px; }
-#reload { padding: 3px 8px; font-size: 12px; }
+
+footer {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 16px;
+  background: var(--sinan-background, #f4f6fa);
+  border-top: 1px solid var(--sinan-line, #dfe5f0);
+  font-size: 11.5px;
+  color: var(--sinan-muted, #5c687d);
+  font-variant-numeric: tabular-nums;
+}
+
+#size { margin-left: auto; font-family: var(--font-mono); font-size: 11px; }
+
+#error {
+  margin: 0;
+  max-height: 90px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 8px 16px;
+  background: var(--sinan-error-background, #fdf1f2);
+  border-top: 1px solid color-mix(in srgb, var(--sinan-error, #b8323a) 22%, transparent);
+  color: var(--sinan-error, #b8323a);
+  font-size: 12px;
+}
+
+#reload { padding: 3px 9px; font-size: 11.5px; }
+
 @media (max-width: 400px) { header, footer { padding-left: 10px; padding-right: 10px; } }
 
 /* CodeMirror's default bracket highlight assumes a light background. */
 #editor .cm-editor .cm-matchingBracket {
-  color: var(--sinan-text, #253047);
-  background-color: var(--sinan-selected, #e4ebfc);
-  outline: 1px solid var(--sinan-accent, #315ed8);
+  color: var(--sinan-text, #161d2b);
+  background-color: var(--sinan-selected, #e1eafc);
+  outline: 1px solid var(--sinan-accent, #2558e8);
 }
 #editor .cm-editor .cm-nonmatchingBracket {
-  color: var(--sinan-error, #ac3f43);
-  background-color: var(--sinan-error-background, #fff0f0);
+  color: var(--sinan-error, #b8323a);
+  background-color: var(--sinan-error-background, #fdf1f2);
 }
 
-.query-bar { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-bottom: 1px solid var(--sinan-line, #e1e5ee); background: var(--sinan-background, #f6f7fb); }
-.query-bar label { flex-shrink: 0; color: var(--sinan-muted, #67738a); font: 13px "SFMono-Regular", Menlo, Consolas, monospace; }
-.query-bar input { flex: 1; min-width: 0; padding: 10px 0; border: none; outline: none; color: var(--sinan-text, #253047); background: transparent; font: 12px "SFMono-Regular", Menlo, Consolas, monospace; }
-.query-bar input::placeholder { color: var(--sinan-placeholder, #818da3); }
-.query-bar:focus-within { box-shadow: inset 0 -2px var(--sinan-accent, #315ed8); }
-.query-bar button { flex-shrink: 0; padding: 4px 8px; border: none; border-radius: 4px; color: var(--sinan-accent, #315ed8); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
-.query-bar button:hover { background: var(--sinan-hover, #eaf0fc); }
+.query-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--sinan-line, #dfe5f0);
+  background: var(--sinan-surface, #ffffff);
+  transition: box-shadow 140ms var(--ease-out);
+}
+
+.query-bar label {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--sinan-line, #dfe5f0);
+  background: var(--sinan-background, #f4f6fa);
+  color: var(--sinan-muted, #5c687d);
+  font: 11.5px var(--font-mono);
+}
+
+.query-bar input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  border: none;
+  outline: none;
+  color: var(--sinan-text, #161d2b);
+  background: transparent;
+  font: 12.5px var(--font-mono);
+}
+
+.query-bar input::placeholder { color: var(--sinan-placeholder, #8793a8); }
+.query-bar:focus-within { box-shadow: inset 0 -2px var(--sinan-accent, #2558e8); }
+
+.query-bar button {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--sinan-accent, #2558e8);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.query-bar button:hover:not(:disabled) {
+  background: var(--sinan-hover, #eaeff9);
+}
