@@ -27,7 +27,7 @@ def verify_native(data, os, arch):
 
 
 def package(source, output, os, arch):
-    manifest = json.loads((source / "manifest.json").read_text())
+    manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
     entry = manifest["runtime"].get("entry")
     if manifest["runtime"]["kind"] == "process":
         assert entry == "backend/plugin" + (".exe" if os == "windows" else ""), "原生入口与目标系统不符"
@@ -50,7 +50,7 @@ def package(source, output, os, arch):
                 archive.writestr(info, file.read_bytes())
     data = path.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
-    path.with_suffix(".zip.sha256").write_text(f"{digest}  {path.name}\n")
+    path.with_suffix(".zip.sha256").write_text(f"{digest}  {path.name}\n", encoding="utf-8")
     return {"id": manifest["id"], "version": manifest["version"], "os": os, "arch": arch, "file": path.name, "sha256": digest, "size": len(data)}
 
 
@@ -58,21 +58,21 @@ def main():
     output = ROOT / "dist"
     assets = []
     json_source = ROOT / "bin/plugins/json-tool"
-    current_json = json.loads((ROOT / "plugins/json-tool/manifest.json").read_text())
-    assert json.loads((json_source / "manifest.json").read_text()) == current_json, "JSON 包清单已过期，请重新构建"
+    current_json = json.loads((ROOT / "plugins/json-tool/manifest.json").read_text(encoding="utf-8"))
+    assert json.loads((json_source / "manifest.json").read_text(encoding="utf-8")) == current_json, "JSON 包清单已过期，请重新构建"
     for os, arch in TARGETS:
         assets.append(package(json_source, output, os, arch))
-    current_clipboard = json.loads((ROOT / "plugins/clipboard/manifest.json").read_text())
+    current_clipboard = json.loads((ROOT / "plugins/clipboard/manifest.json").read_text(encoding="utf-8"))
     for os, arch in TARGETS:
         source = ROOT / "bin/targets" / f"{os}-{arch}" / "clipboard"
         if not source.exists():
             continue
-        built = json.loads((source / "manifest.json").read_text())
+        built = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
         expected = json.loads(json.dumps(current_clipboard))
         expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
         assert built == expected, f"{os}-{arch} 剪贴板清单已过期，请重新构建"
         assets.append(package(source, output, os, arch))
-    (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n")
+    (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n", encoding="utf-8")
     for asset in assets:
         print(asset["file"])
 

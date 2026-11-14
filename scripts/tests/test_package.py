@@ -44,13 +44,13 @@ class PackageTest(unittest.TestCase):
             root = Path(directory)
             source, out = root / "source", root / "out"
             source.mkdir()
-            manifest = {"id": "fixture.plugin", "version": "1.0.0", "runtime": {"kind": "declarative"}}
-            (source / "manifest.json").write_text(json.dumps(manifest))
+            manifest = {"id": "fixture.plugin", "name": "剪贴板", "version": "1.0.0", "runtime": {"kind": "declarative"}}
+            (source / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
             records = [packaging.package(source, out, os, arch) for os, arch in packaging.TARGETS]
             self.assertEqual(len({item["sha256"] for item in records}), 1)
             (source / "backend").mkdir()
             manifest["runtime"] = {"kind": "process", "entry": "backend/plugin"}
-            (source / "manifest.json").write_text(json.dumps(manifest))
+            (source / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
             (source / "backend/plugin").write_bytes(executable("linux", "arm64"))
             record = packaging.package(source, out, "linux", "arm64")
             with ZipFile(out / record["file"]) as archive:
