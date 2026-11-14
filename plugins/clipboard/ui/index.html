@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>剪贴板</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+<header><input id="search" type="search" maxlength="256" placeholder="搜索剪贴板历史" aria-label="搜索历史" autocomplete="off" spellcheck="false" autofocus><button id="clear" title="清空历史">清空</button></header>
+<div class="workspace"><div id="list" role="listbox" aria-label="剪贴板历史" tabindex="0"></div><aside aria-label="条目预览"><div id="meta"></div><pre id="text"></pre><canvas id="image" hidden aria-label="图片预览"></canvas><div id="empty">复制文本或图片后，会显示在这里</div></aside></div>
+<footer><span id="status" role="status"></span><span class="hint">↑ ↓ 选择　↵ 粘贴</span><button id="remove" disabled>删除</button><button id="copy" disabled>复制</button><button id="paste" class="primary" disabled>粘贴</button></footer>
+</main><script type="module" src="app.js"></script></body></html>

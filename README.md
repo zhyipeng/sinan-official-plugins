@@ -8,7 +8,7 @@ Sinan 官方插件源码仓库。
 
 ## 开发与构建
 
-需要 Node.js 22.12+、npm；ZIP 打包需要 Python 3，无 Go 后端。
+需要 Node.js 22.12+、npm 和 Go 1.26；ZIP 打包需要 Python 3。JSON 工具仍为纯前端，剪贴板使用 Go 后端。
 
 ```bash
 make setup
@@ -51,3 +51,7 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 执行 `make test`、`make package`，生成 `dist/tools.json-<版本>-darwin-arm64.zip` 与 `darwin-amd64.zip`、摘要文件和 `assets.json`。插件为纯前端，两种架构包的内容相同；当前仅登记已有 HTML 承载能力的 macOS。需要支持 CSSStyleSheet 的 WebKit（Safari 16.4+）。
 
 提交源码后，以清单版本创建 `v<版本>` 标签，在 GitHub Release 上传这两份 ZIP 与摘要。不要覆盖已发布版本的资产。取得真实 Release ID、Asset ID 后，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/tools.json/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。本仓库当前尚无自动发布工作流。
+
+## 剪贴板插件
+
+新增 **剪贴板**（`tools.clipboard` 0.1.0），使用 Go 原生后台进程和隔离 HTML 界面，支持文本/图片历史、本地持久化及 `⌘/Ctrl + Shift + V` 呼出与自动粘贴。需要新版宿主的 ADR 0056 接口；安装时确认原生信任。构建现在还需要 Go 1.26；`make package` 附加当前平台的剪贴板 ZIP。功能、平台依赖与限制见 [剪贴板说明](plugins/clipboard/README.md)。SDK 快照已归一到 UPSTREAM.json 记录的本体提交，逐文件摘要与该提交的源码字节一致。

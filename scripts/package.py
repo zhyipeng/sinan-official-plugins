@@ -26,3 +26,25 @@ for arch in ("arm64", "amd64"):
     assets.append({"os": "darwin", "arch": arch, "file": out.name, "sha256": digest, "size": len(data)})
     print(out.name)
 (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n")
+
+# Native clipboard package is built for the current host (or explicit GOOS/GOARCH).
+import os
+import platform
+clipboard = root / "bin/plugins/clipboard"
+if clipboard.exists():
+    manifest = json.loads((clipboard / "manifest.json").read_text())
+    target_os = os.environ.get("GOOS") or {"Darwin": "darwin", "Windows": "windows", "Linux": "linux"}[platform.system()]
+    target_arch = os.environ.get("GOARCH") or {"aarch64": "arm64", "arm64": "arm64", "AMD64": "amd64", "x86_64": "amd64"}[platform.machine()]
+    out = output / f"{manifest['id']}-{manifest['version']}-{target_os}-{target_arch}.zip"
+    with ZipFile(out, "w", ZIP_DEFLATED) as archive:
+        for path in sorted(clipboard.rglob("*")):
+            if path.is_symlink():
+                raise ValueError("发行包不能包含符号链接")
+            if path.is_file():
+                archive.write(path, path.relative_to(clipboard).as_posix())
+    data = out.read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    out.with_suffix(".zip.sha256").write_text(f"{digest}  {out.name}\n")
+    assets.append({"id": manifest["id"], "os": target_os, "arch": target_arch, "file": out.name, "sha256": digest, "size": len(data)})
+    print(out.name)
+    (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n")

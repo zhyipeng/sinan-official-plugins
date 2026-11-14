@@ -31,6 +31,7 @@ type InitializeParams struct {
 	Settings   map[string][]string `json:"settings,omitempty"`
 	APIVersion string              `json:"apiVersion"`
 	PluginID   string              `json:"pluginId"`
+	DataDir    string              `json:"dataDir,omitempty"`
 	CacheDir   string              `json:"cacheDir,omitempty"`
 }
 

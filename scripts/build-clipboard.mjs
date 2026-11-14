@@ -1,0 +1,17 @@
+import {build} from 'esbuild';
+import {mkdir,rm,copyFile,readFile,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+const root=fileURLToPath(new URL('../',import.meta.url)),source=join(root,'plugins/clipboard'),out=join(root,'bin/plugins/clipboard');
+await rm(out,{recursive:true,force:true});await mkdir(join(out,'ui'),{recursive:true});await mkdir(join(out,'backend'),{recursive:true});
+await build({entryPoints:[join(source,'ui/app.js')],outfile:join(out,'ui/app.js'),bundle:true,format:'esm',platform:'browser',target:['safari16.4','chrome110','firefox115'],minify:true});
+for(const name of ['index.html','style.css'])await copyFile(join(source,'ui',name),join(out,'ui',name));
+await copyFile(join(source,'icon.svg'),join(out,'icon.svg'));
+const manifest=JSON.parse(await readFile(join(source,'manifest.json'),'utf8'));
+const target=process.env.GOOS||({win32:'windows'}[process.platform]||process.platform);
+const suffix=target==='windows'?'.exe':'';manifest.runtime.entry='backend/plugin'+suffix;
+await writeFile(join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
+const child=spawnSync('go',['build','-o',join(out,'backend/plugin'+suffix),'./backend'],{cwd:source,stdio:'inherit'});
+if(child.error)throw child.error;if(child.status!==0)process.exit(child.status||1);
+console.log(`剪贴板插件已构建：${out}（${target}）`);

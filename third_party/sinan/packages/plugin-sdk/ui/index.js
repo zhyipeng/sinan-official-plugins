@@ -16,3 +16,6 @@ export function writeData(revision,value) { return call({method:'storage.put',re
 
 // Only the current view's explicit opening input; never the live search field.
 export function readLaunch() { return call({method:'launch.get'}); }
+
+// Restores the host-captured target and pastes the current system clipboard.
+export function pasteToPreviousApp() { return call({method:'input.paste'}); }

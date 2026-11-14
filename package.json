@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "test": "node --test plugins/json-tool/tests/*.test.mjs"
+    "build": "node scripts/build.mjs && node scripts/build-clipboard.mjs",
+    "test": "node --test plugins/json-tool/tests/*.test.mjs && cd plugins/clipboard && go test -race ./backend"
   },
   "dependencies": {
     "lossless-json": "4.3.3",
