@@ -15,8 +15,8 @@ let extracted = [];
 const isolatedStyles = {
   name: 'isolated-editor-styles',
   setup(build) {
-    build.onLoad({ filter: editorSource }, async ({ path }) => {
-      let contents = await readFile(path, 'utf8');
+    build.onLoad({ filter: editorSource }, async ({ path: sourcePath }) => {
+      let contents = await readFile(sourcePath, 'utf8');
       const ast = parse(contents, { ecmaVersion: 'latest', sourceType: 'module' });
       const edits = [];
       function visit(node) {
@@ -36,8 +36,8 @@ const isolatedStyles = {
       for (const [start, end] of edits.reverse()) contents = contents.slice(0, start) + 'void 0' + contents.slice(end);
       return { contents, loader: 'js', resolveDir: path.join(root,'node_modules/vanilla-jsoneditor') };
     });
-    build.onLoad({ filter: styleModuleSource }, async ({ path }) => {
-      let contents = await readFile(path, 'utf8');
+    build.onLoad({ filter: styleModuleSource }, async ({ path: sourcePath }) => {
+      let contents = await readFile(sourcePath, 'utf8');
       const condition = '!root.head && root.adoptedStyleSheets && win.CSSStyleSheet';
       if (!contents.includes(condition)) throw new Error('CodeMirror 样式挂载实现已变化');
       // CSSOM sheets also work on Document. Avoid its inline <style> fallback;
