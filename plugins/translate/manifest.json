@@ -1,7 +1,7 @@
 {
   "id": "tools.translate",
   "name": "翻译",
-  "version": "0.1.3",
+  "version": "0.3.0",
   "apiVersion": "1",
   "icon": "icon.svg",
   "runtime": {
@@ -48,6 +48,11 @@
         "id": "cancel",
         "title": "取消翻译",
         "searchOnly": true
+      },
+      {
+        "id": "prepare-llm",
+        "title": "生成翻译提示词",
+        "searchOnly": true
       }
     ],
     "uiViews": [
@@ -59,9 +64,12 @@
           "config",
           "translate",
           "poll",
-          "cancel"
+          "cancel",
+          "prepare-llm"
         ],
-        "permissions": []
+        "permissions": [
+          "llm"
+        ]
       }
     ],
     "settings": [
@@ -122,12 +130,16 @@
         "type": "select",
         "options": [
           {
+            "value": "mymemory",
+            "label": "MyMemory"
+          },
+          {
             "value": "google",
             "label": "Google（免费网页接口）"
           },
           {
-            "value": "mymemory",
-            "label": "MyMemory"
+            "value": "llm",
+            "label": "LLM（使用默认 LLM 配置）"
           }
         ]
       }

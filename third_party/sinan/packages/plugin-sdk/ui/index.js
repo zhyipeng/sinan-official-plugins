@@ -19,3 +19,12 @@ export function readLaunch() { return call({method:'launch.get'}); }
 
 // Restores the host-captured target and pastes the current system clipboard.
 export function pasteToPreviousApp() { return call({method:'input.paste'}); }
+
+// Session-bound encrypted private data; plaintext is exposed only to its owner view.
+export function readEncryptedData() { return call({method:"storage.encrypted.get"}); }
+export function writeEncryptedData(revision,value) { return call({method:"storage.encrypted.put",revision,value}); }
+
+export function listLLMConfigurations() { return call({method:"llm.config"}); }
+export function startLLM(value) { return call({method:"llm.start",value}); }
+export function pollLLM(input) { return call({method:"llm.poll",input}); }
+export function cancelLLM(input) { return call({method:"llm.cancel",input}); }

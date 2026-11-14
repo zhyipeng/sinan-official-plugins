@@ -24,7 +24,7 @@ import (
 )
 
 var languages = []option{{"zh-CN", "简体中文"}, {"zh-TW", "繁體中文"}, {"en", "英语"}, {"ja", "日语"}, {"ko", "韩语"}, {"fr", "法语"}, {"de", "德语"}, {"es", "西班牙语"}, {"ru", "俄语"}, {"pt", "葡萄牙语"}, {"it", "意大利语"}}
-var engines = []option{{"google", "Google（免费网页接口）"}, {"mymemory", "MyMemory"}}
+var engines = []option{{"google", "Google（免费网页接口）"}, {"mymemory", "MyMemory"}, {"llm", "LLM"}}
 
 type option struct {
 	Value string `json:"value"`
@@ -123,6 +123,16 @@ func (t *translator) command(_ context.Context, p protocol.CommandParams) (proto
 		}
 	}
 	switch p.CommandID {
+	case "prepare-llm":
+		var r request
+		if json.Unmarshal([]byte(p.Input), &r) != nil {
+			return failure("翻译参数无效")
+		}
+		value, err := prepareLLM(r, t.target)
+		if err != nil {
+			return failure(err.Error())
+		}
+		return result(value)
 	case "config":
 		return result(map[string]any{"target": t.target, "engine": t.engine, "languages": languages, "engines": engines})
 	case "poll":
@@ -140,6 +150,9 @@ func (t *translator) command(_ context.Context, p protocol.CommandParams) (proto
 		var r request
 		if json.Unmarshal([]byte(p.Input), &r) != nil {
 			return failure("翻译参数无效")
+		}
+		if r.Engine == "llm" {
+			return failure("LLM 请求须通过宿主能力提交")
 		}
 		if strings.TrimSpace(r.Text) == "" || !utf8.ValidString(r.Text) || strings.ContainsRune(r.Text, 0) || utf8.RuneCountInString(r.Text) > 5000 {
 			return failure("请输入 1～5000 字的文本")
@@ -164,8 +177,9 @@ func (t *translator) command(_ context.Context, p protocol.CommandParams) (proto
 			return failure("无法创建翻译任务")
 		}
 		id := hex.EncodeToString(token)
-		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
-		j := &job{cancel: cancel, expires: now.Add(30 * time.Second)}
+		timeout := 12 * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		j := &job{cancel: cancel, expires: now.Add(timeout + 18*time.Second)}
 		t.jobs[id] = j
 		target := t.target
 		go func() {

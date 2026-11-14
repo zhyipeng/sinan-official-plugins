@@ -34,7 +34,7 @@ JSON 构建目录为 `bin/plugins/json-tool`，剪贴板按目标输出到 `bin/
 
 需要支持声明式 `inputMatchers` 和 UI Bridge 2 `launch.get` 的新版司南宿主（ADR 0043）。主输入框中不超过 64 KiB 的合法 JSON 对象、数组会显示“JSON 工具”，选中后原文传入编辑器；数字、字符串、布尔值、null 和非法 JSON 不触发该内容入口。按名称打开仍恢复草稿；带入的文本仅在实际编辑或格式化后保存，不因打开结果自动覆盖旧草稿。
 
-SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 SHA-256，与该提交的源码字节一致。
+SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 SHA-256，并以记录的来源提交及显式增量补丁追溯源码。
 
 ## 表达式筛选
 
@@ -58,10 +58,12 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 
 ## 剪贴板插件
 
-新增 **剪贴板**（`tools.clipboard` 0.1.1），使用 Go 原生后台进程和隔离 HTML 界面，支持文本/图片历史、本地持久化及 `⌘/Ctrl + Shift + V` 呼出与自动粘贴。需要新版宿主的 ADR 0056 接口；安装时确认原生信任。构建现在还需要 Go 1.26；`npm run package` 附加本机目标的剪贴板 ZIP，macOS 的 `npm run package:all` 包含全部六目标。功能、平台依赖与限制见 [剪贴板说明](plugins/clipboard/README.md)。SDK 快照已归一到 UPSTREAM.json 记录的本体提交，逐文件摘要与该提交的源码字节一致。
+新增 **剪贴板**（`tools.clipboard` 0.1.1），使用 Go 原生后台进程和隔离 HTML 界面，支持文本/图片历史、本地持久化及 `⌘/Ctrl + Shift + V` 呼出与自动粘贴。需要新版宿主的 ADR 0056 接口；安装时确认原生信任。构建现在还需要 Go 1.26；`npm run package` 附加本机目标的剪贴板 ZIP，macOS 的 `npm run package:all` 包含全部六目标。功能、平台依赖与限制见 [剪贴板说明](plugins/clipboard/README.md)。SDK 快照已归一到 UPSTREAM.json 记录的本体提交，逐文件摘要与记录的来源及显式补丁一致。
 
 ## 翻译插件
 
-新增 **翻译**（`tools.translate` 0.1.3），接入 Google 免费网页接口与 MyMemory。主输入框输入文本后选择「翻译」即可带入并自动翻译；页面可切换原文语言、目标语言及引擎。在司南设置中配置常用目标语言（默认简体中文）与默认引擎（默认 MyMemory），原文与常用目标相同时译为英语。
+**翻译**（`tools.translate` 0.3.0）支持 MyMemory、Google 免费网页接口与 core 共享 LLM。主输入框带入原文，页面可切换语言、引擎及全局 LLM 配置；支持复制按钮与 Command/Ctrl + C，内容匹配基础分为 0.2。
 
-`npm run build` / `build:all` 在既有插件之后构建翻译，`npm test` 包含其离线测试，打包流程附加已构建目标的 ZIP、摘要与资产记录。翻译后端无需 CGO，可单独通过 `node scripts/build-translate.mjs --all` 构建六目标；CI 在对应系统构建两种架构。上述构建入口现在覆盖三个插件，`package:all` 可生成十八个包；尚未发布翻译插件或登记商店。服务限制、发送文本时机与跨平台验收边界见[翻译说明](plugins/translate/README.md)。
+LLM 在司南全局设置统一配置，插件只获取 ID/名称、提交提示词与输入，不管理 Key 或 HTTP。支持多插件复用和同插件不同服务选择不同配置；0.2.0 私有配置直接忽略，不提供迁移。需配套支持宿主 ADR 0064 的新构建。
+
+构建、测试与打包入口继续在既有插件后处理翻译，六目标产物不代表已发布或实机验收。详情见[翻译说明](plugins/translate/README.md)。SDK 快照已归一到所需宿主提交，记录逐文件 SHA-256；本版无额外补丁。
