@@ -1,7 +1,7 @@
 {
   "id": "tools.translate",
   "name": "翻译",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "apiVersion": "1",
   "icon": "icon.svg",
   "runtime": {
@@ -26,7 +26,8 @@
             "minLength": 1,
             "maxLength": 20000
           }
-        ]
+        ],
+        "inputMatchScore": 0.2
       },
       {
         "id": "config",
