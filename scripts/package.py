@@ -1,50 +1,81 @@
-"""为商店生成 macOS 平台 ZIP；纯前端内容在两种架构中相同。"""
+"""生成经过原生入口校验的跨平台包；不运行插件，不修改已发布资产。"""
 import hashlib
 import json
+import struct
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-root = Path(__file__).resolve().parents[1]
-source = root / "bin/plugins/json-tool"
-manifest = json.loads((source / "manifest.json").read_text())
-if manifest["runtime"]["kind"] != "declarative" or (source / "backend").exists():
-    raise ValueError("JSON 工具必须为无后端插件")
-output = root / "dist"
-output.mkdir(exist_ok=True)
-assets = []
-for arch in ("arm64", "amd64"):
-    out = output / f"{manifest['id']}-{manifest['version']}-darwin-{arch}.zip"
-    with ZipFile(out, "w", ZIP_DEFLATED) as archive:
-        for path in sorted(source.rglob("*")):
-            if path.is_symlink():
-                raise ValueError("发行包不能包含符号链接")
-            if path.is_file():
-                archive.write(path, path.relative_to(source).as_posix())
-    data = out.read_bytes()
-    digest = hashlib.sha256(data).hexdigest()
-    out.with_suffix(".zip.sha256").write_text(f"{digest}  {out.name}\n")
-    assets.append({"os": "darwin", "arch": arch, "file": out.name, "sha256": digest, "size": len(data)})
-    print(out.name)
-(output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n")
+TARGETS = [(os, arch) for os in ("darwin", "windows", "linux") for arch in ("arm64", "amd64")]
+ROOT = Path(__file__).resolve().parents[1]
 
-# Native clipboard package is built for the current host (or explicit GOOS/GOARCH).
-import os
-import platform
-clipboard = root / "bin/plugins/clipboard"
-if clipboard.exists():
-    manifest = json.loads((clipboard / "manifest.json").read_text())
-    target_os = os.environ.get("GOOS") or {"Darwin": "darwin", "Windows": "windows", "Linux": "linux"}[platform.system()]
-    target_arch = os.environ.get("GOARCH") or {"aarch64": "arm64", "arm64": "arm64", "AMD64": "amd64", "x86_64": "amd64"}[platform.machine()]
-    out = output / f"{manifest['id']}-{manifest['version']}-{target_os}-{target_arch}.zip"
-    with ZipFile(out, "w", ZIP_DEFLATED) as archive:
-        for path in sorted(clipboard.rglob("*")):
-            if path.is_symlink():
-                raise ValueError("发行包不能包含符号链接")
-            if path.is_file():
-                archive.write(path, path.relative_to(clipboard).as_posix())
-    data = out.read_bytes()
+
+def verify_native(data, os, arch):
+    """Do not trust filenames or the environment to label a native executable."""
+    if os == "darwin":
+        assert len(data) >= 32 and data[:4] == b"\xcf\xfa\xed\xfe", "不是 Mach-O 64 原生入口"
+        assert struct.unpack_from("<I", data, 4)[0] == {"arm64": 0x100000C, "amd64": 0x1000007}[arch], "Mach-O 架构不符"
+        assert struct.unpack_from("<I", data, 12)[0] == 2, "Mach-O 入口不是可执行程序"
+    elif os == "windows":
+        assert len(data) >= 64 and data[:2] == b"MZ", "不是 PE 原生入口"
+        offset = struct.unpack_from("<I", data, 60)[0]
+        assert offset + 24 <= len(data) and data[offset:offset + 4] == b"PE\0\0", "PE 头无效"
+        assert struct.unpack_from("<H", data, offset + 4)[0] == {"arm64": 0xAA64, "amd64": 0x8664}[arch], "PE 架构不符"
+    else:
+        assert len(data) >= 64 and data[:6] == b"\x7fELF\x02\x01", "不是 ELF 64 小端入口"
+        assert struct.unpack_from("<H", data, 18)[0] == {"arm64": 183, "amd64": 62}[arch], "ELF 架构不符"
+        assert struct.unpack_from("<H", data, 16)[0] in (2, 3), "ELF 入口不是可执行程序"
+
+
+def package(source, output, os, arch):
+    manifest = json.loads((source / "manifest.json").read_text())
+    entry = manifest["runtime"].get("entry")
+    if manifest["runtime"]["kind"] == "process":
+        assert entry == "backend/plugin" + (".exe" if os == "windows" else ""), "原生入口与目标系统不符"
+        assert not (source / entry).is_symlink(), "原生入口不能是符号链接"
+        verify_native((source / entry).read_bytes(), os, arch)
+    else:
+        assert manifest["runtime"]["kind"] == "declarative" and not (source / "backend").exists(), "声明式包不能混入后端"
+    output.mkdir(parents=True, exist_ok=True)
+    path = output / f"{manifest['id']}-{manifest['version']}-{os}-{arch}.zip"
+    with ZipFile(path, "w", ZIP_DEFLATED) as archive:
+        for file in sorted(source.rglob("*")):
+            assert not file.is_symlink(), "发行包不能包含符号链接"
+            if file.is_file():
+                name = file.relative_to(source).as_posix()
+                # Identical pure frontend packages have identical bytes on every OS.
+                info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                info.create_system = 3
+                info.external_attr = (0o100755 if name == entry else 0o100644) << 16
+                info.compress_type = ZIP_DEFLATED
+                archive.writestr(info, file.read_bytes())
+    data = path.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
-    out.with_suffix(".zip.sha256").write_text(f"{digest}  {out.name}\n")
-    assets.append({"id": manifest["id"], "os": target_os, "arch": target_arch, "file": out.name, "sha256": digest, "size": len(data)})
-    print(out.name)
+    path.with_suffix(".zip.sha256").write_text(f"{digest}  {path.name}\n")
+    return {"id": manifest["id"], "version": manifest["version"], "os": os, "arch": arch, "file": path.name, "sha256": digest, "size": len(data)}
+
+
+def main():
+    output = ROOT / "dist"
+    assets = []
+    json_source = ROOT / "bin/plugins/json-tool"
+    current_json = json.loads((ROOT / "plugins/json-tool/manifest.json").read_text())
+    assert json.loads((json_source / "manifest.json").read_text()) == current_json, "JSON 包清单已过期，请重新构建"
+    for os, arch in TARGETS:
+        assets.append(package(json_source, output, os, arch))
+    current_clipboard = json.loads((ROOT / "plugins/clipboard/manifest.json").read_text())
+    for os, arch in TARGETS:
+        source = ROOT / "bin/targets" / f"{os}-{arch}" / "clipboard"
+        if not source.exists():
+            continue
+        built = json.loads((source / "manifest.json").read_text())
+        expected = json.loads(json.dumps(current_clipboard))
+        expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
+        assert built == expected, f"{os}-{arch} 剪贴板清单已过期，请重新构建"
+        assets.append(package(source, output, os, arch))
     (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n")
+    for asset in assets:
+        print(asset["file"])
+
+
+if __name__ == "__main__":
+    main()

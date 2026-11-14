@@ -1,4 +1,4 @@
-.PHONY: setup build test package
+.PHONY: setup build test package package-all
 
 setup:
 	npm ci --ignore-scripts
@@ -10,4 +10,7 @@ test:
 	npm test
 
 package: build
-	python3 scripts/package.py
+	node scripts/package.mjs
+
+package-all:
+	npm run package:all

@@ -6,11 +6,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"image"
-	"image/color"
-	"image/png"
 	"runtime"
 	"syscall"
+	"time"
 	"unicode/utf16"
 	"unsafe"
 )
@@ -27,14 +25,30 @@ func withClipboard(fn func() error) error {
 		return errors.New("clipboard owner unavailable")
 	}
 	defer user32.NewProc("DestroyWindow").Call(hwnd)
-	ok, _, _ := user32.NewProc("OpenClipboard").Call(hwnd)
-	if ok == 0 {
+	opened := false
+	for attempt := 0; attempt < 4; attempt++ {
+		ok, _, _ := user32.NewProc("OpenClipboard").Call(hwnd)
+		if ok != 0 {
+			opened = true
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !opened {
 		return errors.New("clipboard busy")
 	}
 	defer user32.NewProc("CloseClipboard").Call()
 	return fn()
 }
+func pngFormat() uintptr {
+	name, _ := syscall.UTF16PtrFromString("PNG")
+	format, _, _ := user32.NewProc("RegisterClipboardFormatW").Call(uintptr(unsafe.Pointer(name)))
+	return format
+}
 func globalBytes(format uintptr, limit int) []byte {
+	if format == 0 {
+		return nil
+	}
 	h, _, _ := user32.NewProc("GetClipboardData").Call(format)
 	if h == 0 {
 		return nil
@@ -57,51 +71,28 @@ func readClipboard(previous uint64) (content, uint64, error) {
 	}
 	var c content
 	err := withClipboard(func() error {
-		pngName, _ := syscall.UTF16PtrFromString("PNG")
-		pngFormat, _, _ := user32.NewProc("RegisterClipboardFormatW").Call(uintptr(unsafe.Pointer(pngName)))
-		if raw := globalBytes(pngFormat, maxImage); len(raw) > 0 {
+		// Snapshot the sequence while the clipboard is locked against other owners.
+		seq, _, _ = user32.NewProc("GetClipboardSequenceNumber").Call()
+		if raw := globalBytes(pngFormat(), maxImage); len(raw) > 0 {
 			candidate := content{"image", raw}
 			if _, _, err := validate(candidate); err == nil {
 				c = candidate
 				return nil
 			}
 		}
-		b := globalBytes(8, 64<<20)
-		if len(b) >= 40 {
-			header := int(binary.LittleEndian.Uint32(b))
-			w := int(int32(binary.LittleEndian.Uint32(b[4:])))
-			signedH := int(int32(binary.LittleEndian.Uint32(b[8:])))
-			h := signedH
-			if h < 0 {
-				h = -h
-			}
-			bits := int(binary.LittleEndian.Uint16(b[14:]))
-			compression := binary.LittleEndian.Uint32(b[16:])
-			stride := ((w*bits + 31) / 32) * 4
-			if header >= 40 && header <= len(b) && w > 0 && h > 0 && int64(w)*int64(h) <= 16_000_000 && (bits == 24 || bits == 32) && compression == 0 && stride > 0 && int64(header)+int64(stride)*int64(h) <= int64(len(b)) {
-				img := image.NewNRGBA(image.Rect(0, 0, w, h))
-				for y := 0; y < h; y++ {
-					row := y
-					if signedH > 0 {
-						row = h - 1 - y
-					}
-					for x := 0; x < w; x++ {
-						offset := header + row*stride + x*(bits/8)
-						img.SetNRGBA(x, y, color.NRGBA{b[offset+2], b[offset+1], b[offset], 255})
-					}
-				}
-				var out bytes.Buffer
-				if png.Encode(&out, img) == nil {
-					c = content{"image", out.Bytes()}
+		for _, format := range []uintptr{17, 8} {
+			if raw := globalBytes(format, 64<<20); len(raw) > 0 {
+				if png, err := decodeDIB(raw); err == nil {
+					c = content{"image", png}
 					return nil
 				}
 			}
 		}
-		b = globalBytes(13, maxText*2+2)
-		if len(b) >= 2 {
-			units := make([]uint16, 0, len(b)/2)
-			for i := 0; i+1 < len(b); i += 2 {
-				u := binary.LittleEndian.Uint16(b[i:])
+		raw := globalBytes(13, maxText*2+2)
+		if len(raw) >= 2 {
+			units := make([]uint16, 0, len(raw)/2)
+			for i := 0; i+1 < len(raw); i += 2 {
+				u := binary.LittleEndian.Uint16(raw[i:])
 				if u == 0 {
 					break
 				}
@@ -116,55 +107,71 @@ func readClipboard(previous uint64) (content, uint64, error) {
 	}
 	return c, uint64(seq), nil
 }
+
+type clipboardFormat struct {
+	format uintptr
+	data   []byte
+	memory uintptr
+}
+
 func writeClipboard(c content) error {
-	var data []byte
-	format := uintptr(13)
+	if _, _, err := validate(c); err != nil {
+		return err
+	}
+	formats := []clipboardFormat{}
 	if c.Kind == "text" {
 		units := utf16.Encode([]rune(string(c.Data)))
-		data = make([]byte, (len(units)+1)*2)
+		data := make([]byte, (len(units)+1)*2)
 		for i, u := range units {
 			binary.LittleEndian.PutUint16(data[i*2:], u)
 		}
+		formats = append(formats, clipboardFormat{format: 13, data: data})
 	} else {
-		img, err := png.Decode(bytes.NewReader(c.Data))
+		dib, err := encodeDIB(c.Data)
 		if err != nil {
 			return err
 		}
-		b := img.Bounds()
-		w, h := b.Dx(), b.Dy()
-		data = make([]byte, 40+w*h*4)
-		binary.LittleEndian.PutUint32(data, 40)
-		binary.LittleEndian.PutUint32(data[4:], uint32(w))
-		binary.LittleEndian.PutUint32(data[8:], uint32(h))
-		binary.LittleEndian.PutUint16(data[12:], 1)
-		binary.LittleEndian.PutUint16(data[14:], 32)
-		for y := 0; y < h; y++ {
-			for x := 0; x < w; x++ {
-				r, g, bb, _ := img.At(b.Min.X+x, b.Min.Y+y).RGBA()
-				offset := 40 + ((h-1-y)*w+x)*4
-				data[offset] = byte(bb >> 8)
-				data[offset+1] = byte(g >> 8)
-				data[offset+2] = byte(r >> 8)
-			}
+		if format := pngFormat(); format != 0 {
+			formats = append(formats, clipboardFormat{format: format, data: c.Data})
 		}
-		format = 8
+		formats = append(formats, clipboardFormat{format: 8, data: dib})
 	}
 	return withClipboard(func() error {
-		mem, _, _ := kernel32.NewProc("GlobalAlloc").Call(0x42, uintptr(len(data)))
-		if mem == 0 {
-			return errors.New("allocation failed")
+		// Allocate all formats before clearing the user's current clipboard. Once
+		// SetClipboardData succeeds Windows owns that allocation, including PNG alpha.
+		defer func() {
+			for _, f := range formats {
+				if f.memory != 0 {
+					kernel32.NewProc("GlobalFree").Call(f.memory)
+				}
+			}
+		}()
+		for i := range formats {
+			mem, _, _ := kernel32.NewProc("GlobalAlloc").Call(0x42, uintptr(len(formats[i].data)))
+			if mem == 0 {
+				return errors.New("allocation failed")
+			}
+			formats[i].memory = mem
+			ptr, _, _ := kernel32.NewProc("GlobalLock").Call(mem)
+			if ptr == 0 {
+				return errors.New("lock failed")
+			}
+			copy(unsafe.Slice((*byte)(unsafe.Pointer(ptr)), len(formats[i].data)), formats[i].data)
+			kernel32.NewProc("GlobalUnlock").Call(mem)
 		}
-		ptr, _, _ := kernel32.NewProc("GlobalLock").Call(mem)
-		if ptr == 0 {
-			kernel32.NewProc("GlobalFree").Call(mem)
-			return errors.New("lock failed")
-		}
-		copy(unsafe.Slice((*byte)(unsafe.Pointer(ptr)), len(data)), data)
-		kernel32.NewProc("GlobalUnlock").Call(mem)
-		user32.NewProc("EmptyClipboard").Call()
-		ok, _, _ := user32.NewProc("SetClipboardData").Call(format, mem)
+		ok, _, _ := user32.NewProc("EmptyClipboard").Call()
 		if ok == 0 {
-			kernel32.NewProc("GlobalFree").Call(mem)
+			return errors.New("clipboard unavailable")
+		}
+		written := false
+		for i := range formats {
+			ok, _, _ := user32.NewProc("SetClipboardData").Call(formats[i].format, formats[i].memory)
+			if ok != 0 {
+				formats[i].memory = 0
+				written = true
+			}
+		}
+		if !written {
 			return errors.New("write failed")
 		}
 		return nil

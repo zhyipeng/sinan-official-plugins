@@ -42,7 +42,7 @@ const isolatedStyles = {
       // CSSOM sheets also work on Document. Avoid its inline <style> fallback;
       // requires Safari 16.4+ (the desktop host already uses modern WebKit).
       contents = contents.replace(condition, 'root.adoptedStyleSheets && win.CSSStyleSheet');
-      contents = contents.replace('this.styleTag = doc.createElement("style")', 'throw new Error("JSON 工具需要支持 CSSStyleSheet 的 WebKit（Safari 16.4+）")');
+      contents = contents.replace('this.styleTag = doc.createElement("style")', 'throw new Error("JSON 工具需要支持 CSSStyleSheet 的现代浏览器引擎，请更新司南及系统 WebView")');
       return { contents, loader: 'js' };
     });
   }
@@ -68,7 +68,7 @@ await build({
   outdir: path.join(out, 'ui'),
   bundle: true, splitting: true, format: 'esm', platform: 'browser',
   alias: { 'vanilla-picker': 'vanilla-picker/csp' },
-  target: ['safari16.4'], minify: true, sourcemap: false,
+  target: ['safari16.4','chrome119','firefox115'], minify: true, sourcemap: false,
   legalComments: 'inline', plugins: [isolatedStyles],
 });
 await writeFile(path.join(out, 'ui/editor.css'), extracted.join('\n') + '\n' + await readFile(path.join(root, 'node_modules/vanilla-picker/dist/vanilla-picker.csp.css'), 'utf8'));

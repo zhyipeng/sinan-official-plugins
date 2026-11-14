@@ -252,7 +252,7 @@ func (h *history) watch() {
 		}
 		h.mu.Lock()
 		if err != nil {
-			h.status = "无法读取或保存剪贴板，请检查系统剪贴板支持与本地存储"
+			h.status = clipboardStatus(err)
 		} else {
 			h.status = ""
 		}

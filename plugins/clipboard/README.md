@@ -1,6 +1,6 @@
 # 剪贴板
 
-`tools.clipboard` 0.1.0，需要包含 ADR 0056 接口的新版司南。独立安装的官方原生插件，安装时需要明确确认原生信任。
+`tools.clipboard` 0.1.1，需要包含 ADR 0056 接口的新版司南。独立安装的官方原生插件，安装时需要明确确认原生信任。
 
 `⌘/Ctrl + Shift + V` 打开历史；搜索、↑/↓ 选择、Enter 或“粘贴”会恢复原应用并输入完整条目。也可双击粘贴或点“复制”手动粘贴。支持文本和图片预览、删除与清空。热键可在司南“设置 → 插件快捷键 → 剪贴板历史”中按键录入、恢复默认并保存，重启后保留。热键被占用时可在该处修改，也可按名称搜索打开，冲突见插件中心诊断。
 
@@ -8,4 +8,7 @@
 
 macOS 自动粘贴须在“系统设置 → 隐私与安全性 → 辅助功能”为司南开启权限；缺少权限时会弹出引导，点击“打开系统设置”跳转，开启后返回重试即可。Windows 受系统前台切换和应用完整性级别限制。Linux 读取/写入需要 X11 的 `xclip` 或 Wayland 的 `wl-clipboard`；自动粘贴仅支持 X11 + `xdotool`，Wayland 使用“复制”手动粘贴。系统拒绝输入时已选内容仍留在剪贴板。
 
-在仓库根目录执行 `node scripts/build-clipboard.mjs`，输出 `bin/plugins/clipboard`。`make package` 会附带当前平台/架构的 ZIP，不自动安装或发布；Windows 构建清单入口自动为 `.exe`。Go 后端测试在此目录执行 `go test -race ./backend`，不访问真实剪贴板。真实热键、焦点和跨应用输入尚未验收。
+在仓库根目录执行 `node scripts/build-clipboard.mjs`，输出 `bin/targets/<os>-<arch>/clipboard`。`npm run package` 会附带本机平台/架构的 ZIP；macOS 用 `npm run package:all` 构建六目标，其他系统可用 `--target=windows-amd64` 等显式目标交叉构建 Windows/Linux，不自动安装或发布；Windows 构建清单入口自动为 `.exe`。Go 后端测试在此目录执行 `go test -race ./backend`，不访问真实剪贴板。真实热键、焦点和跨应用输入尚未验收。
+
+
+0.1.1 的跨平台调整：Windows 支持常见 DIB / DIBV5 的上下行方向、24/32 位和位域，写入 PNG 保留透明度并提供白底 DIB 回退；Linux 按实际 MIME 精确选择文本/PNG，缺少 xclip 或 wl-clipboard 时显示对应安装提示。错误提示按宿主平台区分，Windows/Linux 不再展示 macOS 权限说明。后端仍不包含任意宿主调用或完整 Wails Bridge。

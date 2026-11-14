@@ -1,3 +1,4 @@
+import {pasteFailureMessage} from './platform.js';
 import {ready,execute,pasteToPreviousApp} from '../../../third_party/sinan/packages/plugin-sdk/ui/index.js';
 const $=id=>document.getElementById(id);
 let clearPending=false;
@@ -39,7 +40,7 @@ async function act(action){
   await command(action==='remove'?'delete':'select',selected);
   if(action==='paste'){await pasteToPreviousApp();status('正在粘贴…');}
   else if(action==='copy')status('已复制');else{selected='';lastPreview='';}
- }catch(error){status(action==='paste'?`${error.message}；macOS 自动粘贴需开启司南的辅助功能权限，可先点复制手动粘贴。`:error.message);}finally{busy=false;controls();if(action==='remove')await refresh();}
+ }catch(error){status(action==='paste'?pasteFailureMessage(error.message,navigator.platform):error.message);}finally{busy=false;controls();if(action==='remove')await refresh();}
 }
 $('search').addEventListener('input',()=>{queryTicket++;void refresh();});
 for(const action of ['copy','paste','remove'])$(action).addEventListener('click',()=>void act(action));

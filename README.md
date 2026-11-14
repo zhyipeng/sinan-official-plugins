@@ -4,11 +4,11 @@ Sinan 官方插件源码仓库。
 
 ## 包含插件
 
-- **JSON 工具**（`tools.json`，0.4.2）：基于 `vanilla-jsoneditor` 的纯前端插件，当前先提供 JSON 格式化、压缩、语法高亮、撤销/重做及错误位置提示。数值由 `lossless-json` 处理，保留大整数、小数精度与指数写法；重复键会报错，避免静默丢失数据。
+- **JSON 工具**（`tools.json`，0.4.3）：基于 `vanilla-jsoneditor` 的纯前端插件，当前先提供 JSON 格式化、压缩、语法高亮、撤销/重做及错误位置提示。数值由 `lossless-json` 处理，保留大整数、小数精度与指数写法；重复键会报错，避免静默丢失数据。
 
 ## 开发与构建
 
-需要 Node.js 22.12+、npm 和 Go 1.26；ZIP 打包需要 Python 3。JSON 工具仍为纯前端，剪贴板使用 Go 后端。
+需要 Node.js 22.12+、npm、Go 1.26 和 Python 3（macOS/Linux 命令为 python3，Windows 为 python）。JSON 工具仍为纯前端，剪贴板使用 Go 后端。
 
 ```bash
 make setup
@@ -16,7 +16,7 @@ make test
 make package
 ```
 
-构建目录为 `bin/plugins/json-tool`，macOS ZIP 为 `dist/tools.json-0.4.2-darwin-arm64.zip` 与 `dist/tools.json-0.4.2-darwin-amd64.zip`，各自生成 SHA-256 文件。通过司南插件管理或 CLI 安装、升级；构建本身不修改已有安装，不发布商店版本。
+JSON 构建目录为 `bin/plugins/json-tool`，剪贴板按目标输出到 `bin/targets/<os>-<arch>/clipboard`。`npm run package` 生成 JSON 工具六个平台包和本机目标的剪贴板包；在 macOS 执行 `npm run package:all` 可生成两个插件的全部十二个包。文件名为 `dist/<id>-<版本>-<darwin|windows|linux>-<arm64|amd64>.zip`，各自附带 SHA-256；`dist/assets.json` 记录目标、版本和摘要。构建本身不修改已有安装，不发布商店版本。
 
 ## 使用
 
@@ -26,7 +26,7 @@ make package
 
 ## 隔离页面适配
 
-依赖全部锁定并本地打包，无 CDN、网络请求或后端命令；仅声明 storage，继续使用 UI Bridge 2。构建时提取 `vanilla-jsoneditor` 的组件 CSS 为本地文件，CodeMirror 使用 CSSOM constructed stylesheet，保持宿主 CSP 不变；需要支持该能力的 WebKit（Safari 16.4+）。该适配针对锁定版本，升级依赖必须核对样式提取与资源预算。
+依赖全部锁定并本地打包，无 CDN、网络请求或后端命令；仅声明 storage，继续使用 UI Bridge 2。构建时提取 `vanilla-jsoneditor` 的组件 CSS 为本地文件，CodeMirror 使用 CSSOM constructed stylesheet，保持宿主 CSP 不变；需要支持该能力的现代引擎：macOS Safari 16.4+ 对应 WebKit、Windows WebView2 119+、Linux WebKitGTK 2.40+。该适配针对锁定版本，升级依赖必须核对样式提取与资源预算。
 
 每次构建检查资源数量、单文件 512 KiB 和总量 2 MiB 限制。SDK 使用 `third_party/sinan/UPSTREAM.json` 记录的快照。`make test` 仅运行无界面业务测试，真实桌面、主题和编辑器交互仍需单独验收。
 
@@ -48,10 +48,14 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 
 ## 发布到插件商店
 
-执行 `make test`、`make package`，生成 `dist/tools.json-<版本>-darwin-arm64.zip` 与 `darwin-amd64.zip`、摘要文件和 `assets.json`。插件为纯前端，两种架构包的内容相同；当前仅登记已有 HTML 承载能力的 macOS。需要支持 CSSStyleSheet 的 WebKit（Safari 16.4+）。
+执行 `npm test`、`npm run package`；macOS 可用 `npm run package:all` 构建全矩阵。JSON 工具为纯前端，六种目标包内容和摘要相同。剪贴板原生入口按 OS/CPU 独立构建，打包时检查 Mach-O / PE / ELF 头，拒绝错标。Windows 的入口为 `backend/plugin.exe`，其余为 `backend/plugin`，ZIP 写入固定文件时间及 POSIX 执行位。
 
-提交源码后，以清单版本创建 `v<版本>` 标签，在 GitHub Release 上传这两份 ZIP 与摘要。不要覆盖已发布版本的资产。取得真实 Release ID、Asset ID 后，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/tools.json/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。本仓库当前尚无自动发布工作流。
+支持目标：macOS、Windows、Linux 的 ARM64 与 AMD64。macOS 剪贴板依赖 Cocoa/CGO，必须在 macOS 构建；Windows/Linux 后端为纯 Go，可交叉构建。Windows PowerShell 可直接用上述 npm/Node 命令，不需要 Make 或 shell 通配符。单个目标例如 `node scripts/build-clipboard.mjs --target=windows-amd64`；同一命令可指定多个 `--target`。
+
+`.github/workflows/platforms.yml` 在三个系统运行无界面测试、构建两个 CPU 目标并上传安装包，不访问真实剪贴板或启动窗口。编译和数据测试不代替真实 WebView、热键、焦点和跨应用输入验收。
+
+提交源码后，以清单版本创建 `v<版本>` 标签，在对应 GitHub Release 上传各目标 ZIP 与摘要。不要覆盖已发布版本的资产。取得真实 Release ID、Asset ID 后，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/tools.json/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。CI 不自动发布或修改商店，避免把构建产物直接视为已审核版本。
 
 ## 剪贴板插件
 
-新增 **剪贴板**（`tools.clipboard` 0.1.0），使用 Go 原生后台进程和隔离 HTML 界面，支持文本/图片历史、本地持久化及 `⌘/Ctrl + Shift + V` 呼出与自动粘贴。需要新版宿主的 ADR 0056 接口；安装时确认原生信任。构建现在还需要 Go 1.26；`make package` 附加当前平台的剪贴板 ZIP。功能、平台依赖与限制见 [剪贴板说明](plugins/clipboard/README.md)。SDK 快照已归一到 UPSTREAM.json 记录的本体提交，逐文件摘要与该提交的源码字节一致。
+新增 **剪贴板**（`tools.clipboard` 0.1.1），使用 Go 原生后台进程和隔离 HTML 界面，支持文本/图片历史、本地持久化及 `⌘/Ctrl + Shift + V` 呼出与自动粘贴。需要新版宿主的 ADR 0056 接口；安装时确认原生信任。构建现在还需要 Go 1.26；`npm run package` 附加本机目标的剪贴板 ZIP，macOS 的 `npm run package:all` 包含全部六目标。功能、平台依赖与限制见 [剪贴板说明](plugins/clipboard/README.md)。SDK 快照已归一到 UPSTREAM.json 记录的本体提交，逐文件摘要与该提交的源码字节一致。

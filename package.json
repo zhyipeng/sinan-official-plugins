@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs && node scripts/build-clipboard.mjs",
-    "test": "node --test plugins/json-tool/tests/*.test.mjs && cd plugins/clipboard && go test -race ./backend"
+    "test": "node scripts/test.mjs",
+    "build:all": "node scripts/build.mjs && node scripts/build-clipboard.mjs --all",
+    "package": "npm run build && node scripts/package.mjs",
+    "package:all": "npm run build:all && node scripts/package.mjs"
   },
   "dependencies": {
     "lossless-json": "4.3.3",
