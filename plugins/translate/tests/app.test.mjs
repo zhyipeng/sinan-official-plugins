@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-const source=(await readFile(new URL('../ui/app.js',import.meta.url),'utf8')).replace(/^import .*;\n/,'');
+const sourceFile=await readFile(new URL('../ui/app.js',import.meta.url),'utf8');
+const withoutBridgeImport=text=>text.replace(/^import [^\r\n]*;\r?\n/,'');
+const source=withoutBridgeImport(sourceFile);
 const wait=async predicate=>{for(let n=0;n<100;n++){if(predicate())return;await new Promise(r=>setTimeout(r,5));}throw new Error('等待界面状态超时');};
 function fixture(launch={},controls={}){
  const elements=new Map(),calls=[],listeners={},copied=[],llmCalls=[],cancelled=[];let next=0,buffer;
@@ -97,3 +99,5 @@ test('切换或编辑后取消 core LLM 任务，迟到结果不能覆盖新输�
 test('没有全局配置时提示去设置，保持免费引擎可用',async()=>{
  const f=fixture({}, {profiles:[]});await wait(()=>f.node('llm-profile').options.length===1);assert.equal(f.node('llm-profile').options[0].textContent,'请在设置中添加 LLM 配置');assert.equal(f.node('engine').value,'google');assert.equal(f.calls.some(c=>c.id==='translate'),false);
 });
+
+test('界面夹具同时支持 LF 与 Windows CRLF 源文件',()=>{for(const newline of ["\n","\r\n"]){const text=sourceFile.replace(/\r?\n/g,newline);assert.doesNotThrow(()=>new vm.Script(withoutBridgeImport(text)));}});
