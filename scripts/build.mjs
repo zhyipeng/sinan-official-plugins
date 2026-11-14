@@ -1,4 +1,5 @@
 import { build } from 'esbuild';
+import {editorSource,styleModuleSource} from './style-paths.mjs';
 import { parse } from 'acorn';
 import { readFile, writeFile, mkdir, rm, copyFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +15,7 @@ let extracted = [];
 const isolatedStyles = {
   name: 'isolated-editor-styles',
   setup(build) {
-    build.onLoad({ filter: /vanilla-jsoneditor\/index\.js$/ }, async ({ path }) => {
+    build.onLoad({ filter: editorSource }, async ({ path }) => {
       let contents = await readFile(path, 'utf8');
       const ast = parse(contents, { ecmaVersion: 'latest', sourceType: 'module' });
       const edits = [];
@@ -33,9 +34,9 @@ const isolatedStyles = {
       visit(ast);
       if (extracted.length !== 54) throw new Error(`上游 CSS 注入数量已变化：${extracted.length}`);
       for (const [start, end] of edits.reverse()) contents = contents.slice(0, start) + 'void 0' + contents.slice(end);
-      return { contents, loader: 'js', resolveDir: root + '/node_modules/vanilla-jsoneditor' };
+      return { contents, loader: 'js', resolveDir: path.join(root,'node_modules/vanilla-jsoneditor') };
     });
-    build.onLoad({ filter: /style-mod\/src\/style-mod\.js$/ }, async ({ path }) => {
+    build.onLoad({ filter: styleModuleSource }, async ({ path }) => {
       let contents = await readFile(path, 'utf8');
       const condition = '!root.head && root.adoptedStyleSheets && win.CSSStyleSheet';
       if (!contents.includes(condition)) throw new Error('CodeMirror 样式挂载实现已变化');
@@ -71,6 +72,7 @@ await build({
   target: ['safari16.4','chrome119','firefox115'], minify: true, sourcemap: false,
   legalComments: 'inline', plugins: [isolatedStyles],
 });
+if(extracted.length!==54)throw new Error('编辑器 CSS 提取钩子未生效，拒绝生成不符合 CSP 的安装包');
 await writeFile(path.join(out, 'ui/editor.css'), extracted.join('\n') + '\n' + await readFile(path.join(root, 'node_modules/vanilla-picker/dist/vanilla-picker.csp.css'), 'utf8'));
 for (const file of ['index.html', 'style.css']) {
   await copyFile(path.join(root, 'plugins/json-tool/ui', file), path.join(out, 'ui', file));
