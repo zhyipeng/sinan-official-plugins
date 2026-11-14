@@ -59,3 +59,9 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 ## 剪贴板插件
 
 新增 **剪贴板**（`tools.clipboard` 0.1.1），使用 Go 原生后台进程和隔离 HTML 界面，支持文本/图片历史、本地持久化及 `⌘/Ctrl + Shift + V` 呼出与自动粘贴。需要新版宿主的 ADR 0056 接口；安装时确认原生信任。构建现在还需要 Go 1.26；`npm run package` 附加本机目标的剪贴板 ZIP，macOS 的 `npm run package:all` 包含全部六目标。功能、平台依赖与限制见 [剪贴板说明](plugins/clipboard/README.md)。SDK 快照已归一到 UPSTREAM.json 记录的本体提交，逐文件摘要与该提交的源码字节一致。
+
+## 翻译插件
+
+新增 **翻译**（`tools.translate` 0.1.2），接入 Google 免费网页接口与 MyMemory。主输入框输入文本后选择「翻译」即可带入并自动翻译；页面可切换原文语言、目标语言及引擎。在司南设置中配置常用目标语言（默认简体中文）与默认引擎（默认 MyMemory），原文与常用目标相同时译为英语。
+
+`npm run build` / `build:all` 在既有插件之后构建翻译，`npm test` 包含其离线测试，打包流程附加已构建目标的 ZIP、摘要与资产记录。翻译后端无需 CGO，可单独通过 `node scripts/build-translate.mjs --all` 构建六目标；CI 在对应系统构建两种架构。上述构建入口现在覆盖三个插件，`package:all` 可生成十八个包；尚未发布翻译插件或登记商店。服务限制、发送文本时机与跨平台验收边界见[翻译说明](plugins/translate/README.md)。

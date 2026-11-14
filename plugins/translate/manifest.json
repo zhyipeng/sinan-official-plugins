@@ -1,0 +1,139 @@
+{
+  "id": "tools.translate",
+  "name": "翻译",
+  "version": "0.1.2",
+  "apiVersion": "1",
+  "icon": "icon.svg",
+  "runtime": {
+    "kind": "process",
+    "entry": "backend/plugin"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "open",
+        "title": "翻译",
+        "keywords": [
+          "translate",
+          "translation",
+          "翻译"
+        ],
+        "uiView": "translator",
+        "inputMatchers": [
+          {
+            "kind": "regex",
+            "pattern": "\\S",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        ]
+      },
+      {
+        "id": "config",
+        "title": "读取翻译设置",
+        "searchOnly": true
+      },
+      {
+        "id": "translate",
+        "title": "开始翻译",
+        "searchOnly": true
+      },
+      {
+        "id": "poll",
+        "title": "读取翻译结果",
+        "searchOnly": true
+      },
+      {
+        "id": "cancel",
+        "title": "取消翻译",
+        "searchOnly": true
+      }
+    ],
+    "uiViews": [
+      {
+        "id": "translator",
+        "entry": "index.html",
+        "bridgeVersion": "2",
+        "commands": [
+          "config",
+          "translate",
+          "poll",
+          "cancel"
+        ],
+        "permissions": []
+      }
+    ],
+    "settings": [
+      {
+        "id": "target-language",
+        "title": "常用目标语言（默认：简体中文）",
+        "type": "select",
+        "options": [
+          {
+            "value": "zh-cn",
+            "label": "简体中文"
+          },
+          {
+            "value": "zh-tw",
+            "label": "繁體中文"
+          },
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "ru",
+            "label": "俄语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          },
+          {
+            "value": "it",
+            "label": "意大利语"
+          }
+        ]
+      },
+      {
+        "id": "default-engine",
+        "title": "默认翻译引擎（默认：MyMemory）",
+        "type": "select",
+        "options": [
+          {
+            "value": "google",
+            "label": "Google（免费网页接口）"
+          },
+          {
+            "value": "mymemory",
+            "label": "MyMemory"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": [],
+  "activationEvents": [
+    "onCommand:open"
+  ]
+}

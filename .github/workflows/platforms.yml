@@ -39,6 +39,7 @@ jobs:
       - run: npm test
       - run: node scripts/build.mjs
       - run: node scripts/build-clipboard.mjs --target=${{ matrix.os }}-arm64 --target=${{ matrix.os }}-amd64
+      - run: node scripts/build-translate.mjs --target=${{ matrix.os }}-arm64 --target=${{ matrix.os }}-amd64
       - run: python scripts/package.py
       - uses: actions/upload-artifact@v4
         with:
