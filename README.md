@@ -67,3 +67,5 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 LLM 在司南全局设置统一配置，插件只获取 ID/名称、提交提示词与输入，不管理 Key 或 HTTP。支持多插件复用和同插件不同服务选择不同配置；0.2.0 私有配置直接忽略，不提供迁移。需配套支持宿主 ADR 0064 的新构建。
 
 构建、测试与打包入口继续在既有插件后处理翻译，六目标产物不代表已发布或实机验收。详情见[翻译说明](plugins/translate/README.md)。SDK 快照已归一到所需宿主提交，记录逐文件 SHA-256；本版无额外补丁。
+
+翻译 0.3.0 已发布至 [GitHub Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/v0.3.0)，六目标包与 SHA-256 已上传；平台 CI 构建和无界面检查通过，实机 UI/真实 LLM 调用未验收。需新版宿主源码 d594882 或更新。

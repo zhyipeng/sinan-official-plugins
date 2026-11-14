@@ -31,6 +31,8 @@ MyMemory 与 LLM 的目标语言选择使用本地识别：单个无重音拉丁
 
 macOS、Windows、Linux 的 arm64/amd64 后端均可无 CGO 构建，Windows 使用 `backend/plugin.exe`。页面使用本地资源和窄桥，不放宽 CSP；需要宿主既定 WKWebView、WebView2 119+、WebKitGTK 2.40+ 基线。X11/Wayland 的窗口、焦点和输入法由宿主适配，编译不代表实机验收。
 
-`npm test` 为无界面回归；`node scripts/build-translate.mjs --all` 构建六目标，现有打包入口生成 ZIP 与 SHA-256。未使用真实 API Key、未调用真实 LLM、未运行真实 UI，未发布或登记商店资产。
+`npm test` 为无界面回归；`node scripts/build-translate.mjs --all` 构建六目标，现有打包入口生成 ZIP 与 SHA-256。未使用真实 API Key、未调用真实 LLM、未运行真实 UI。
+
+0.3.0 已发布：[GitHub Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/v0.3.0)。macOS、Windows、Linux CI 构建与无界面检查通过，真实 UI 验收仍待完成；商店资料由 sinan-plugin-registry 维护。
 
 本版所需宿主：sinan 源码 `d594882c5561f6e1f1b0d583efb1c1e34659b461` 或更新，须具备共享 LLM 窄桥；早期同为 0.1.0 的宿主不兼容。
