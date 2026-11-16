@@ -1,6 +1,6 @@
 # 计算
 
-`tools.calculator` 0.2.0（待发布）是可独立安装的官方插件，包含主搜索计算和计算稿纸。计算业务在插件内，不依赖完整 Wails Bridge，使用宿主共享剪贴板 API；登记格式不变。
+`tools.calculator` 0.2.0是可独立安装的官方插件，包含主搜索计算和计算稿纸。计算业务在插件内，不依赖完整 Wails Bridge，使用宿主共享剪贴板 API；登记格式不变。
 
 ## 使用
 
@@ -53,4 +53,8 @@ node scripts/package.mjs
 
 ## 0.2.0 重构
 
-系统剪贴板调用迁至司南宿主，搜索回车与页面复制均使用 Go SDK 的 `HostFromContext(ctx).ClipboardWrite`。计算、搜索与稿纸存储保持插件职责；删除三端重复适配及其专用测试，宿主接管相应平台测试。需要司南 0.2.0 或更新版本及 [ADR 0066](../../../sinan/docs/adr/0066-host-clipboard-api.md) 能力；已发布 0.1.0 资产保持不变。六目标交叉构建和无界面回归通过不代表真实剪贴板验收。
+系统剪贴板调用迁至司南宿主，搜索回车与页面复制均使用 Go SDK 的 `HostFromContext(ctx).ClipboardWrite`。计算、搜索与稿纸存储保持插件职责；删除三端重复适配及其专用测试，宿主接管相应平台测试。需要司南 0.2.1 或更新版本及 [ADR 0066](../../../sinan/docs/adr/0066-host-clipboard-api.md) 能力；已发布 0.1.0 资产保持不变。六目标交叉构建和无界面回归通过不代表真实剪贴板验收。
+
+## 0.2.0 发行结果
+
+[0.2.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.calculator-v0.2.0) 已公开，三系统 arm64/amd64 六目标 ZIP 与摘要均已上传并核验；[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43806605442) 通过。源码提交 ff690a01a275a3e271faa71603bd4e29a412dc0b，SDK 固定来源为本体 718cc49。最低宿主为 [Sinan v0.2.1](https://github.com/zhyipeng/sinan/releases/tag/v0.2.1)，初始化仍核对 clipboard.v1 能力；该宿主另修复商店版本判定写死的问题。真实剪贴板与桌面 UI 尚未验收。

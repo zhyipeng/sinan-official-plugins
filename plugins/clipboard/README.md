@@ -1,6 +1,6 @@
 # 剪贴板
 
-`tools.clipboard` 0.2.0（待发布），需要司南 0.2.0 或更新版本，初始化检查 `hostCapabilities` 中的 `clipboard.v1`，旧宿主明确拒绝激活。独立安装的官方原生插件，安装时需要明确确认原生信任。
+`tools.clipboard` 0.2.0，需要司南 0.2.1 或更新版本，初始化检查 `hostCapabilities` 中的 `clipboard.v1`，旧宿主明确拒绝激活。独立安装的官方原生插件，安装时需要明确确认原生信任。
 
 `⌘/Ctrl + Shift + V` 打开历史；搜索、↑/↓ 选择、Enter 或“粘贴”会恢复原应用并输入完整条目。也可双击粘贴或点“复制”手动粘贴。支持文本和图片预览、删除与清空。热键可在司南“设置 → 插件快捷键 → 剪贴板历史”中按键录入、恢复默认并保存，重启后保留。热键被占用时可在该处修改，也可按名称搜索打开，冲突见插件中心诊断。
 
@@ -16,3 +16,7 @@ macOS 自动粘贴须在“系统设置 → 隐私与安全性 → 辅助功能�
 ## 0.2.0 重构
 
 文本/PNG 系统读写、macOS 敏感类型过滤、Windows PNG/DIB 转换与 Linux 依赖判断统一由宿主负责；插件仅通过 Go SDK 的 `ClipboardRead` / `ClipboardWrite` 调用。历史、500 毫秒轮询、去重、容量与持久化继续留在插件，不新增宿主监控。平台适配与对应无界面测试已迁至宿主，插件后端为纯 Go，不再依赖 Cocoa/CGO，可交叉构建六目标。Linux 工具依赖仍由宿主使用，自动粘贴的权限与 Wayland 限制不变。原生进程信任与 OS 沙箱边界不变；已发布 0.1.2 资产保持不变，不登记未发布包。
+
+## 0.2.0 发行结果
+
+[0.2.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.clipboard-v0.2.0) 已公开，三系统 arm64/amd64 六目标 ZIP 与摘要均已上传并核验；[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43806605442) 通过。源码提交 ff690a01a275a3e271faa71603bd4e29a412dc0b，SDK 固定来源为本体 718cc49。最低宿主为 [Sinan v0.2.1](https://github.com/zhyipeng/sinan/releases/tag/v0.2.1)，初始化仍核对 clipboard.v1 能力；该宿主另修复商店版本判定写死的问题。真实剪贴板与桌面 UI 尚未验收。

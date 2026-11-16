@@ -112,6 +112,6 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 
 [三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43799988731) 无界面测试与构建通过；每个插件均上传三系统 arm64/amd64 共六个 ZIP 和摘要。资产版本、图标、原生入口架构与 GitHub SHA-256 已核验，商店登记使用真实 Release/Asset ID。新标签需要支持独立发布标签的司南源码 c518ca5 或更新；真实桌面交互仍未验收。
 
-## 共享剪贴板 0.2.0 发布准备
+## 共享剪贴板 0.2.0
 
-计算、剪贴板插件的系统读写统一使用司南宿主 API，两个插件版本均为 0.2.0。最低宿主版本为 0.2.0，并在初始化核对 `clipboard.v1` 能力；历史发行包和商店记录保持不变。Go 与页面 SDK 快照来自 UPSTREAM.json 所指的本体提交，文件哈希已同步。新发行使用 `tools.calculator-v0.2.0`、`tools.clipboard-v0.2.0` 标签，等待三平台无界面 CI 和六目标包核验通过后发布。真实系统剪贴板与 UI 尚未验收。
+计算、剪贴板插件的系统读写统一使用司南宿主 API，两个插件版本均为 0.2.0。最低宿主版本为 0.2.1，并在初始化核对 `clipboard.v1` 能力；历史发行包和商店记录保持不变。Go 与页面 SDK 快照来自 UPSTREAM.json 所指的本体提交，文件哈希已同步。新发行使用 `tools.calculator-v0.2.0`、`tools.clipboard-v0.2.0` 标签，[三平台无界面 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43806605442) 与六目标包核验均已通过，两个 Release 已公开，最低要求 [Sinan v0.2.1](https://github.com/zhyipeng/sinan/releases/tag/v0.2.1)；本体六目标原生构建与无界面检查也已通过。真实系统剪贴板与 UI 尚未验收。
