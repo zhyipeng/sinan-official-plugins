@@ -69,3 +69,9 @@ LLM 在司南全局设置统一配置，插件只获取 ID/名称、提交提示
 构建、测试与打包入口继续在既有插件后处理翻译，六目标产物不代表已发布或实机验收。详情见[翻译说明](plugins/translate/README.md)。SDK 快照已归一到所需宿主提交，记录逐文件 SHA-256；本版无额外补丁。
 
 翻译 0.3.0 已发布至 [GitHub Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/v0.3.0)，六目标包与 SHA-256 已上传；平台 CI 构建和无界面检查通过，实机 UI/真实 LLM 调用未验收。需新版宿主源码 d594882 或更新。
+
+## 日历插件
+
+新增 **日历**（`tools.calendar` 0.1.2），基于 React DayPicker 的纯前端月历，支持农历、传统节日、节气和中国大陆放假/补班标记，不管理日程。支持年月跳转、今天、中文键盘导航和宿主主题。假期数据离线收录 2004–2027 年；范围外显示未收录，不推测调休。
+
+`npm run build` / `build:all` 在现有插件后追加日历构建，`npm run package` / `package:all` 追加六目标日历 ZIP。CI 同步接入，不自动安装或发布；详见[日历说明](plugins/calendar/README.md)。

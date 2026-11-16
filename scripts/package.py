@@ -82,6 +82,11 @@ def main():
         expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
         assert built == expected, f"{os}-{arch} 翻译清单已过期，请重新构建"
         assets.append(package(source, output, os, arch))
+    calendar_source = ROOT / "bin/plugins/calendar"
+    current_calendar = json.loads((ROOT / "plugins/calendar/manifest.json").read_text(encoding="utf-8"))
+    assert json.loads((calendar_source / "manifest.json").read_text(encoding="utf-8")) == current_calendar, "日历清单已过期，请重新构建"
+    for os, arch in TARGETS:
+        assets.append(package(calendar_source, output, os, arch))
     (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n", encoding="utf-8")
     for asset in assets:
         print(asset["file"])
