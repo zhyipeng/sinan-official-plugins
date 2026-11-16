@@ -26,4 +26,10 @@ npm run package
 
 编译目标沿用 Safari 16.4、Chromium 119、Firefox 115；需配套现代 WKWebView、WebView2 或 WebKitGTK 和支持上述桥/图标能力的司南宿主。不依赖平台命令、原生后端、X11 或 Wayland API，但不能据此宣称目标引擎均已验收。
 
-无界面测试覆盖春节/除夕、闰月、节气、2026/2027 放假与补班、未知年份降级、日期边界、不同时区，以及真实 React 组件静态渲染和可访问性属性。三平台 CI 已追加构建与测试入口；CI 结果、各目标系统运行、主题、键盘/输入法、焦点、缩放和原生 WebView 实机交互须分别验收。未进行真实桌面或浏览器交互验收，不将六目标 ZIP 视为已发布支持。
+无界面测试覆盖春节/除夕、闰月、节气、2026/2027 放假与补班、未知年份降级、日期边界、不同时区，以及真实 React 组件静态渲染和可访问性属性。三平台 CI 已追加构建与测试入口；CI 结果、各目标系统运行、主题、键盘/输入法、焦点、缩放和原生 WebView 实机交互须分别验收。未进行真实桌面或浏览器交互验收；发布状态与目标引擎交互验收分别记录。
+
+## 正式发布
+
+0.1.2 已发布至 [GitHub Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/v0.1.2)，六目标 ZIP 及 SHA-256 已上传。源码提交为 `5aa6a6459a68265048706ba53f47eb3f00e17093`；[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43791121005) 的无界面测试与构建均通过，实机 UI 仍未验收。
+
+需要包含三平台隔离 UI 承载、桥 2 与图标能力的宿主（[司南源码 0bf8cc9 或更新](https://github.com/zhyipeng/sinan/commit/0bf8cc9138bbfbd964cbd4bffb2a1da46f638adb)）；早期同为 0.1.0 的开发构建不能仅凭版本号判断兼容。官方仓库历史标签 v0.1.0、v0.1.1 已用于既有插件，日历按商店标签规则从 0.1.2 首发。
