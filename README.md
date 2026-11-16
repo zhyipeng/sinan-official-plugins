@@ -52,9 +52,9 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 
 支持目标：macOS、Windows、Linux 的 ARM64 与 AMD64。剪贴板 0.2.0 起系统适配移到宿主，插件后端为纯 Go，可交叉构建六目标；macOS 宿主仍需要 Cocoa/CGO。Windows PowerShell 可直接用上述 npm/Node 命令，不需要 Make 或 shell 通配符。单个目标例如 `node scripts/build-clipboard.mjs --target=windows-amd64`；同一命令可指定多个 `--target`。
 
-`.github/workflows/platforms.yml` 在三个系统运行无界面测试、构建两个 CPU 目标并上传安装包，不访问真实剪贴板或启动窗口。编译和数据测试不代替真实 WebView、热键、焦点和跨应用输入验收。
+`.github/workflows/platforms.yml` 为手动触发的三系统全矩阵构建（无界面测试、两 CPU 目标并上传安装包），不访问真实剪贴板或启动窗口。commit/PR 不再自动触发，以节省 Actions 用量。编译和数据测试不代替真实 WebView、热键、焦点和跨应用输入验收。
 
-提交源码后，以插件 ID 和清单版本创建 `<plugin-id>-v<版本>` 标签（例如 `tools.calendar-v0.1.2`），在对应 GitHub Release 上传各目标 ZIP 与摘要。不要覆盖已发布版本的资产。取得真实 Release ID、Asset ID 后，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/<plugin-id>/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。CI 不自动发布或修改商店，避免把构建产物直接视为已审核版本。
+提交源码后，以插件 ID 和清单版本创建 `<plugin-id>-v<版本>` 标签（例如 `tools.calendar-v0.1.2`）。推送该标签会触发 `.github/workflows/release.yml`：在 macOS 运行无界面测试、构建六目标包，并以草稿方式创建并发布对应 GitHub Release（只新增该版本资产，不覆盖已发布版本；已存在的非草稿 Release 会拒绝）。OCR 完整包依赖固定上游源码与模型，仍需按 `plugins/ocr/README` 本地构建后手动上传，CI 会显式失败。发布后仍需人工取得真实 Release ID、Asset ID，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/<plugin-id>/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。CI 只发布 GitHub Release 资产，不修改商店，避免把构建产物直接视为已审核版本。
 
 ## 剪贴板插件
 

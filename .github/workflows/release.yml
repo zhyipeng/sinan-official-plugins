@@ -1,0 +1,42 @@
+name: Official plugin release
+# 推送 <plugin-id>-v<version> 标签时触发：无界面测试、六目标构建与打包，
+# 只发布该插件对应的 GitHub Release 资产。商店登记仍由人工完成。
+# OCR 完整包需本地固定上游与模型构建，CI 不支持，会显式失败。
+# commit/PR 不触发；如需全平台三系统构建验证，手动运行 platforms.yml。
+on:
+  push:
+    tags: ['*-v*']
+permissions:
+  contents: write
+concurrency:
+  group: official-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: plugins/clipboard/go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - name: Build all plugin targets (six platform packages)
+        run: npm run build:all
+      - name: Package assets
+        run: node scripts/package.mjs
+      - name: Publish tagged plugin release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: node scripts/publish-release.mjs "$TAG"
