@@ -54,7 +54,7 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 
 `.github/workflows/platforms.yml` 在三个系统运行无界面测试、构建两个 CPU 目标并上传安装包，不访问真实剪贴板或启动窗口。编译和数据测试不代替真实 WebView、热键、焦点和跨应用输入验收。
 
-提交源码后，以清单版本创建 `v<版本>` 标签，在对应 GitHub Release 上传各目标 ZIP 与摘要。不要覆盖已发布版本的资产。取得真实 Release ID、Asset ID 后，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/tools.json/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。CI 不自动发布或修改商店，避免把构建产物直接视为已审核版本。
+提交源码后，以插件 ID 和清单版本创建 `<plugin-id>-v<版本>` 标签（例如 `tools.calendar-v0.1.2`），在对应 GitHub Release 上传各目标 ZIP 与摘要。不要覆盖已发布版本的资产。取得真实 Release ID、Asset ID 后，将版本、源码提交、兼容协议、宿主最低版本、平台、大小、SHA-256 和下载地址登记到 `sinan-plugin-registry/plugins/<plugin-id>/plugin.json` 的 releases 中，状态设为 published。目录 main 更新后商店刷新即可安装。CI 不自动发布或修改商店，避免把构建产物直接视为已审核版本。
 
 ## 剪贴板插件
 
@@ -77,3 +77,9 @@ LLM 在司南全局设置统一配置，插件只获取 ID/名称、提交提示
 `npm run build` / `build:all` 在现有插件后追加日历构建，`npm run package` / `package:all` 追加六目标日历 ZIP。CI 同步接入，不自动安装或发布；详见[日历说明](plugins/calendar/README.md)。
 
 日历 0.1.2 已[正式发布](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/v0.1.2)，六目标包与摘要已上传，[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43791121005) 无界面检查与构建通过，实机 UI 未验收。版本从 0.1.2 首发以避开仓库已有的 v0.1.0 / v0.1.1 标签。
+
+## 插件独立版本与发布标签
+
+每个插件独立维护 `manifest.version`，同一仓库内允许多个插件同时为 0.1.0。新发布统一使用 `<plugin-id>-v<version>`，例如 `tools.calendar-v0.1.0` 与 `tools.clipboard-v0.1.0`，资产文件名和包版本不变。运行 `npm run release:tag -- calendar`（或 `node scripts/release-tag.mjs calendar`）从实际清单取得正确标签，再用于创建 Git 标签及 GitHub Release。标签生成不会推送、发布或修改安装。
+
+宿主和登记校验器继续兼容历史 `v<version>`，已发布标签/资产/目录记录保持不变。目录按插件 ID 去重版本，同一插件的同一版本仍不可覆盖或重复登记。命名空间标签需要支持此扩展的新宿主，旧宿主会拒绝包含新标签的目录快照；更新宿主前不要迁移现有记录。日历已发行的 0.1.2 不降级，后续版本不再因其他插件标签占用而跳号。
