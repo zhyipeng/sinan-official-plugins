@@ -4,7 +4,7 @@ Sinan 官方插件源码仓库。
 
 ## 包含插件
 
-- **JSON 工具**（`tools.json`，0.4.3）：基于 `vanilla-jsoneditor` 的纯前端插件，当前先提供 JSON 格式化、压缩、语法高亮、撤销/重做及错误位置提示。数值由 `lossless-json` 处理，保留大整数、小数精度与指数写法；重复键会报错，避免静默丢失数据。
+- **JSON 工具**（`tools.json`，0.4.4）：基于 `vanilla-jsoneditor` 的纯前端插件，当前先提供 JSON 格式化、压缩、语法高亮、撤销/重做及错误位置提示。数值由 `lossless-json` 处理，保留大整数、小数精度与指数写法；重复键会报错，避免静默丢失数据。
 
 ## 开发与构建
 
@@ -48,7 +48,7 @@ SDK 快照已归一到 `UPSTREAM.json` 记录的本体提交，逐文件记录 S
 
 ## 发布到插件商店
 
-执行 `npm test`、`npm run package`；macOS 可用 `npm run package:all` 构建全矩阵。JSON 工具为纯前端，六种目标包内容和摘要相同。剪贴板原生入口按 OS/CPU 独立构建，打包时检查 Mach-O / PE / ELF 头，拒绝错标。Windows 的入口为 `backend/plugin.exe`，其余为 `backend/plugin`，ZIP 写入固定文件时间及 POSIX 执行位。
+执行 `npm test`、`npm run package`；macOS 可用 `npm run package:all` 构建全矩阵。JSON 工具为纯前端，六种目标复用源码；不同构建系统的文本换行可能影响包摘要，以每个实际发行资产为准。剪贴板原生入口按 OS/CPU 独立构建，打包时检查 Mach-O / PE / ELF 头，拒绝错标。Windows 的入口为 `backend/plugin.exe`，其余为 `backend/plugin`，ZIP 写入固定文件时间及 POSIX 执行位。
 
 支持目标：macOS、Windows、Linux 的 ARM64 与 AMD64。macOS 剪贴板依赖 Cocoa/CGO，必须在 macOS 构建；Windows/Linux 后端为纯 Go，可交叉构建。Windows PowerShell 可直接用上述 npm/Node 命令，不需要 Make 或 shell 通配符。单个目标例如 `node scripts/build-clipboard.mjs --target=windows-amd64`；同一命令可指定多个 `--target`。
 
@@ -99,3 +99,15 @@ LLM 在司南全局设置统一配置，插件只获取 ID/名称、提交提示
 ## 统一图标发行
 
 JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一浅底蓝线图标；计算 0.1.0 首次上架同一风格。使用插件独立标签发布，保留历史发行包。三平台 CI、真实资产和商店登记分别核对；实机 UI 验收仍未执行。
+
+五个版本均已正式发布：
+
+| 插件 | 版本 / Release |
+| --- | --- |
+| JSON 工具 | [0.4.4](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.json-v0.4.4) |
+| 剪贴板 | [0.1.2](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.clipboard-v0.1.2) |
+| 翻译 | [0.3.1](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.translate-v0.3.1) |
+| 日历 | [0.1.3](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.calendar-v0.1.3) |
+| 计算 | [0.1.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.calculator-v0.1.0) |
+
+[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43799988731) 无界面测试与构建通过；每个插件均上传三系统 arm64/amd64 共六个 ZIP 和摘要。资产版本、图标、原生入口架构与 GitHub SHA-256 已核验，商店登记使用真实 Release/Asset ID。新标签需要支持独立发布标签的司南源码 c518ca5 或更新；真实桌面交互仍未验收。

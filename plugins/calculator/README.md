@@ -44,4 +44,9 @@ node scripts/package.mjs
 
 本次本地验证：macOS arm64 无界面前端用例、Go 竞态测试、Go 静态检查、临时宿主目录安装与搜索、六目标交叉构建和包头校验通过。整仓前端 100 项、Python 2 项及既有原生插件竞态回归通过。测试使用模拟剪贴板调用，不读取或修改真实剪贴板。
 
-尚未执行三目标系统实际剪贴板写入、WKWebView / WebView2 / WebKitGTK、输入法、焦点、拆出、主题与 DPI 的真实 UI 验收；远端 CI 和正式发布也未执行。构建成功不代表实机交互已通过；未向商店登记未发布资产。
+尚未执行三目标系统实际剪贴板写入、WKWebView / WebView2 / WebKitGTK、输入法、焦点、拆出、主题与 DPI 的真实 UI 验收；远端三平台 CI 与正式发布现已完成，见下方发行记录。构建成功不代表实机交互已通过。
+
+
+## 首次发行
+
+[0.1.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.calculator-v0.1.0) 已上传 macOS、Windows、Linux 的 arm64/amd64 六目标包与 SHA-256；[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43799988731) 无界面测试及构建通过，安装包已核验清单、图标与原生入口架构。商店资料登记真实发行资产；需支持独立发布标签的司南源码 c518ca5 或更新。真实剪贴板与桌面 UI 验收仍未执行。
