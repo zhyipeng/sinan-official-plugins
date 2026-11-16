@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs && node scripts/build-clipboard.mjs && node scripts/build-translate.mjs && node scripts/build-calendar.mjs",
+    "build": "node scripts/build.mjs && node scripts/build-clipboard.mjs && node scripts/build-translate.mjs && node scripts/build-calendar.mjs && node scripts/build-calculator.mjs",
     "test": "node scripts/test.mjs",
-    "build:all": "node scripts/build.mjs && node scripts/build-clipboard.mjs --all && node scripts/build-translate.mjs --all && node scripts/build-calendar.mjs",
+    "build:all": "node scripts/build.mjs && node scripts/build-clipboard.mjs --all && node scripts/build-translate.mjs --all && node scripts/build-calendar.mjs && node scripts/build-calculator.mjs --all",
     "package": "npm run build && node scripts/package.mjs",
     "package:all": "npm run build:all && node scripts/package.mjs",
     "release:tag": "node scripts/release-tag.mjs"
