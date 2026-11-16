@@ -38,5 +38,6 @@ jobs:
       - name: Publish tagged plugin release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: node scripts/publish-release.mjs "$TAG"
