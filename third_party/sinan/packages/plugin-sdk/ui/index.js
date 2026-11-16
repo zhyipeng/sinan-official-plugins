@@ -32,3 +32,7 @@ export function cancelLLM(input) { return call({method:"llm.cancel",input}); }
 // Text calls keep the page bridge's existing budget; binary clipboard uses backend RPC.
 export function readClipboardText() { return call({method:'clipboard.readText'}); }
 export function writeClipboardText(input) { return call({method:'clipboard.writeText',input}); }
+
+// Snapshot the system clipboard into this view; does not transfer image bytes to JS.
+export function readClipboardImage() { return call({method:'clipboard.readImage'}); }
+export function executeImage(commandId,url) { return call({method:'command.executeImage',commandId,input:url}); }

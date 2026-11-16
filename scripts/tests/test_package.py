@@ -57,3 +57,20 @@ class PackageTest(unittest.TestCase):
                 self.assertTrue(archive.getinfo("backend/plugin").external_attr >> 16 & 0o111)
             with self.assertRaises(AssertionError):
                 packaging.package(source, out, "windows", "arm64")
+
+    def test_worker_executable_mode_and_architecture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, out = root / "source", root / "out"
+            (source / "backend").mkdir(parents=True)
+            manifest = {"id": "fixture.worker", "version": "1.0.0", "runtime": {"kind": "process", "entry": "backend/plugin"}}
+            (source / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+            (source / "backend/plugin").write_bytes(executable("linux", "arm64"))
+            worker = source / "backend/worker"
+            worker.write_bytes(executable("linux", "arm64"))
+            record = packaging.package(source, out, "linux", "arm64")
+            with ZipFile(out / record["file"]) as archive:
+                self.assertTrue(archive.getinfo("backend/worker").external_attr >> 16 & 0o111)
+            worker.write_bytes(executable("linux", "amd64"))
+            with self.assertRaises(AssertionError):
+                packaging.package(source, out, "linux", "arm64")

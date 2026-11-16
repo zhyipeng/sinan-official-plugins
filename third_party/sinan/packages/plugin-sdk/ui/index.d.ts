@@ -17,3 +17,7 @@ export function cancelLLM(id:string):Promise<null>;
 
 export function readClipboardText():Promise<string>;
 export function writeClipboardText(text:string):Promise<null>;
+
+export interface UIImage {url:string;mimeType:string;width:number;height:number;bytes:number}
+export function readClipboardImage():Promise<UIImage|null>;
+export function executeImage(commandId:string,url:string):Promise<{text:string;dismiss?:boolean}>;

@@ -35,6 +35,8 @@ def package(source, output, os, arch):
         verify_native((source / entry).read_bytes(), os, arch)
     else:
         assert manifest["runtime"]["kind"] == "declarative" and not (source / "backend").exists(), "声明式包不能混入后端"
+    files = list(source.rglob("*"))
+    assert len(files) <= 2048 and sum(f.stat().st_size for f in files if f.is_file()) <= 64 << 20, "插件解压内容超过宿主预算"
     output.mkdir(parents=True, exist_ok=True)
     path = output / f"{manifest['id']}-{manifest['version']}-{os}-{arch}.zip"
     with ZipFile(path, "w", ZIP_DEFLATED) as archive:
@@ -42,13 +44,24 @@ def package(source, output, os, arch):
             assert not file.is_symlink(), "发行包不能包含符号链接"
             if file.is_file():
                 name = file.relative_to(source).as_posix()
+                payload = file.read_bytes()
+                library = file.name.endswith((".dll", ".dylib", ".so")) or ".so." in file.name
+                # Infer native helpers from bytes, not POSIX mode bits, so
+                # Windows packaging/tests preserve Unix worker execution too.
+                executable = name == entry or (
+                    file.parent == source / "backend" and not library and
+                    payload.startswith((b"MZ", b"\x7fELF", b"\xcf\xfa\xed\xfe"))
+                )
+                if executable:
+                    verify_native(payload, os, arch)
                 # Identical pure frontend packages have identical bytes on every OS.
                 info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
                 info.create_system = 3
-                info.external_attr = (0o100755 if name == entry else 0o100644) << 16
+                info.external_attr = (0o100755 if executable else 0o100644) << 16
                 info.compress_type = ZIP_DEFLATED
-                archive.writestr(info, file.read_bytes())
+                archive.writestr(info, payload)
     data = path.read_bytes()
+    assert len(data) <= 64 << 20, "插件 ZIP 超过宿主预算"
     digest = hashlib.sha256(data).hexdigest()
     path.with_suffix(".zip.sha256").write_text(f"{digest}  {path.name}\n", encoding="utf-8")
     return {"id": manifest["id"], "version": manifest["version"], "os": os, "arch": arch, "file": path.name, "sha256": digest, "size": len(data)}
@@ -96,6 +109,15 @@ def main():
         expected = json.loads(json.dumps(current_calculator))
         expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
         assert built == expected, f"{os}-{arch} 计算清单已过期，请重新构建"
+        assets.append(package(source, output, os, arch))
+    current_ocr = json.loads((ROOT / "plugins/ocr/manifest.json").read_text(encoding="utf-8"))
+    for os, arch in TARGETS:
+        source = ROOT / "bin/targets" / f"{os}-{arch}" / "ocr"
+        if not source.exists():
+            continue
+        expected = json.loads(json.dumps(current_ocr))
+        expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
+        assert json.loads((source / "manifest.json").read_text(encoding="utf-8")) == expected, "OCR 清单已过期，请重新构建"
         assets.append(package(source, output, os, arch))
     (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n", encoding="utf-8")
     for asset in assets:

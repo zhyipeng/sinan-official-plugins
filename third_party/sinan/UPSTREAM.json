@@ -1,10 +1,10 @@
 {
   "source": "sinan",
-  "commit": "718cc495ed3a95231b5d4d4296881f1d1119002c",
+  "commit": "a0ad164784c442cbc5079aa10fb2425029e4727e",
   "files": {
-    "packages/plugin-protocol/protocol.go": "f1b0a1c5da4b2810e62624cb4afb0fa0c54240ef9a636bc484532a27d3e6185b",
-    "packages/plugin-sdk/server.go": "5d931dd291ce917298494e78c781ab4e0940ebe9d413bfe6b78c6c68fb0da19e",
-    "packages/plugin-sdk/ui/index.js": "c76fcf3d6a2dd80967170b695e2fcac7a91e9d545a460d16a4a34d0c305a26b6",
-    "packages/plugin-sdk/ui/index.d.ts": "7683d89594fa79d5e1412ebd339d68bab9dde5d797d5f21687c063feef08b019"
+    "packages/plugin-protocol/protocol.go": "d88a9a6bb1bdb717f7bd0885b5ec7d9f659039ee653c1574236218765e945bfa",
+    "packages/plugin-sdk/server.go": "5bed589dffcf5afb9cc828c995a463acfcf7192e325833e5d96ffaf575a7e5ab",
+    "packages/plugin-sdk/ui/index.js": "090d2e4345f1a39c9c40ba9cbddecef37f4fdec181c383d5a19e56c356a8df94",
+    "packages/plugin-sdk/ui/index.d.ts": "aeed866f67a37edcd706348fcf19b05445547a39b76212a0e0af9a6ed27321fd"
   }
 }

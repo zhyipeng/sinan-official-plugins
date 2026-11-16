@@ -88,7 +88,7 @@ func ServeWithHandlers(in io.Reader, out io.Writer, pluginID string, handlers Ha
 			}
 			continue
 		}
-		if len(scanner.Bytes()) >= protocol.MaxMessageBytes {
+		if len(scanner.Bytes()) >= protocol.MaxMessageBytes && (envelope.Method != "command.executeImage" || len(scanner.Bytes()) >= protocol.MaxImageCommandBytes) {
 			return errors.New("request too large")
 		}
 		var req protocol.Request
@@ -158,9 +158,9 @@ func ServeWithHandlers(in io.Reader, out io.Writer, pluginID string, handlers Ha
 			var result any
 			var err error
 			switch req.Method {
-			case "command.execute":
+			case "command.execute", "command.executeImage":
 				var p protocol.CommandParams
-				if handlers.Command == nil || json.Unmarshal(req.Params, &p) != nil {
+				if handlers.Command == nil || json.Unmarshal(req.Params, &p) != nil || (req.Method == "command.execute" && len(p.Image) != 0) || (req.Method == "command.executeImage" && (len(p.Image) == 0 || len(p.Image) > 4<<20)) {
 					send(req, nil, &protocol.Error{Code: -32602, Message: "invalid command"})
 					return
 				}

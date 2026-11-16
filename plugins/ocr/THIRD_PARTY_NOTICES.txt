@@ -1,0 +1,45 @@
+OCR third-party components — tools.ocr 0.1.0
+
+RapidOCRLite v5.0.0a6 (CPU engine)
+Copyright RapidOCR Authors; Apache License 2.0.
+Source: https://github.com/RapidAI/RapidOCRLite/tree/63bef543c782a0d81db2af056e1dfba550c6dd87
+License declaration: pyproject.toml at that commit (license = Apache-2.0).
+Built from pinned source with strict floating point override (-fno-fast-math).
+Metal and Vulkan execution are disabled. No Python runtime is distributed.
+See APACHE-2.0.txt and UPSTREAM_README.md.
+
+PP-OCRv6 small ONNX detector and recognizer
+Copyright PaddlePaddle Authors / Baidu and respective contributors.
+PaddleOCR and RapidAI's model repository declare Apache License 2.0:
+https://github.com/PaddlePaddle/PaddleOCR/blob/main/LICENSE
+https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/README.md
+Conversion/distribution: RapidAI/RapidOCR, v3.10.0 model repository.
+The upstream RapidOCRLite default_models.yaml at the pinned engine commit
+identifies the following exact files and SHA-256 values:
+
+https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/det/PP-OCRv6_det_small.onnx
+SHA-256: 090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f
+Packaged without weight modification as models/det.onnx.
+
+https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/rec/PP-OCRv6_rec_small.onnx
+SHA-256: 6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884
+Packaged without weight modification as models/rec.onnx.
+
+Recognition dictionary: exported from the recognizer character metadata.
+models/dictionary.txt SHA-256:
+f7aa897ca828a4c7c9e2739c30f9161a33306d532f020bcdb91dcfb664a5507e
+It matches the upstream dictionary after removing its final newline:
+https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/paddle/PP-OCRv6/rec/PP-OCRv6_rec_small/ppocrv6_dict.txt
+Original file SHA-256:
+b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d
+See APACHE-2.0.txt for the license text. No Indra model weights are used.
+
+Go runtime and standard library
+Copyright The Go Authors; BSD 3-Clause license in GO-LICENSE.txt.
+The plugin implementation and copied Sinan SDK use the repository's MIT
+license in LICENSE. macOS libc++ and libSystem remain system dependencies;
+these system libraries are not copied into this package.
+
+Provenance checked on 2026-11-16. Engine/models remain upstream alpha
+components; this notice records redistribution sources and modifications,
+not a certification of OCR accuracy or platform UI compatibility.

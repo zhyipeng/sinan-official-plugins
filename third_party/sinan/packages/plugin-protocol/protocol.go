@@ -10,6 +10,10 @@ const MaxMessageBytes = 1 << 20
 const MaxClipboardMessageBytes = 12 << 20
 const ClipboardCapability = "clipboard.v1"
 
+// Image commands carry a host-validated, session-owned PNG (at most 4 MiB).
+const ImageCommandCapability = "ui.image-command.v1"
+const MaxImageCommandBytes = 6 << 20
+
 type ClipboardContent struct {
 	Kind string `json:"kind"`
 	Data []byte `json:"data"`
@@ -60,6 +64,7 @@ type InitializeResult struct {
 }
 
 type CommandParams struct {
+	Image     []byte `json:"image,omitempty"`
 	CommandID string `json:"commandId"`
 	Input     string `json:"input"`
 }
