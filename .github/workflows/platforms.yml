@@ -1,8 +1,10 @@
 name: Official plugin platform builds
 
-# commit/PR 自动构建已关闭以节省 Actions 用量；如需临时全平台构建，可在 Actions
-# 页手动触发。插件发布仍按 README 手动建 tag 并上传 Release 资产。
+# commit/PR 自动构建已关闭以节省 Actions 用量；仅在推送发布 tag 时触发平台构建，
+# 临时全平台验证可在 Actions 页手动触发。发布仍按 README 手动上传 Release 资产。
 on:
+  push:
+    tags: ['**']
   workflow_dispatch:
 
 permissions:
