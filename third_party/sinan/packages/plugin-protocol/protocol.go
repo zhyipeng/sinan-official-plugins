@@ -6,6 +6,23 @@ import "encoding/json"
 const APIVersion = "1"
 const MaxMessageBytes = 1 << 20
 
+// Only clipboard host RPC may use this budget (8 MiB PNG encoded as base64).
+const MaxClipboardMessageBytes = 12 << 20
+const ClipboardCapability = "clipboard.v1"
+
+type ClipboardContent struct {
+	Kind string `json:"kind"`
+	Data []byte `json:"data"`
+}
+type ClipboardParams struct {
+	Sequence uint64           `json:"sequence,omitempty"`
+	Content  ClipboardContent `json:"content,omitempty"`
+}
+type ClipboardResult struct {
+	Content  ClipboardContent `json:"content"`
+	Sequence uint64           `json:"sequence"`
+}
+
 type Request struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      uint64          `json:"id,omitempty"`
@@ -28,11 +45,12 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 type InitializeParams struct {
-	Settings   map[string][]string `json:"settings,omitempty"`
-	APIVersion string              `json:"apiVersion"`
-	PluginID   string              `json:"pluginId"`
-	DataDir    string              `json:"dataDir,omitempty"`
-	CacheDir   string              `json:"cacheDir,omitempty"`
+	HostCapabilities []string            `json:"hostCapabilities,omitempty"`
+	Settings         map[string][]string `json:"settings,omitempty"`
+	APIVersion       string              `json:"apiVersion"`
+	PluginID         string              `json:"pluginId"`
+	DataDir          string              `json:"dataDir,omitempty"`
+	CacheDir         string              `json:"cacheDir,omitempty"`
 }
 
 type InitializeResult struct {

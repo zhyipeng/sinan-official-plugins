@@ -14,3 +14,6 @@ export function listLLMConfigurations():Promise<{profiles:{id:string;name:string
 export function startLLM(value:LLMRequest):Promise<{id:string}>;
 export function pollLLM(id:string):Promise<{done:boolean;text:string;error:string}>;
 export function cancelLLM(id:string):Promise<null>;
+
+export function readClipboardText():Promise<string>;
+export function writeClipboardText(text:string):Promise<null>;

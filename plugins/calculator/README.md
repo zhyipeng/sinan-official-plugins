@@ -1,6 +1,6 @@
 # 计算
 
-`tools.calculator` 0.1.0 是可独立安装的官方插件，包含主搜索计算和计算稿纸。计算业务在插件内，不依赖完整 Wails Bridge，不新增宿主协议、SDK 或登记格式。
+`tools.calculator` 0.2.0（待发布）是可独立安装的官方插件，包含主搜索计算和计算稿纸。计算业务在插件内，不依赖完整 Wails Bridge，使用宿主共享剪贴板 API；登记格式不变。
 
 ## 使用
 
@@ -21,10 +21,10 @@
 
 ## 平台与依赖
 
-需要支持进程 Search Provider、direct 命令、隔离 UI Bridge 2 和私有 storage 的宿主；以本仓库 SDK 快照和当前司南源码的安装校验为基线，不以相同开发版本号推定兼容。安装时需要信任原生进程；`clipboard.write` 是用途声明，不代表操作系统沙箱。
+需要支持进程 Search Provider、direct 命令、隔离 UI Bridge 2 和私有 storage 的宿主；以本仓库 SDK 快照和当前司南源码的安装校验为基线，不以相同开发版本号推定兼容。安装时需要信任原生进程；`clipboard.write` 同时用于宿主 API 能力检查，不代表操作系统沙箱。初始化必须检测 `hostCapabilities` 的 `clipboard.v1`；旧宿主拒绝激活新版插件。
 
-- macOS：通过固定路径 `/usr/bin/pbcopy` 写入文本，不依赖 shell。
-- Windows：使用 Win32 Unicode 剪贴板和不可见的消息窗口作为所有者，不启动控制台或 PowerShell。
+- macOS：由宿主 Cocoa 适配写入文本，插件不再调用 pbcopy。
+- Windows：由宿主 Win32 适配写入 Unicode 文本，插件不再实现系统调用。
 - Linux X11：需要桌面会话和 `xclip`。
 - Linux Wayland：优先使用 `WAYLAND_DISPLAY`，需要 `wl-clipboard` 的 `wl-copy`；不会静默改走 X11。缺少会话或工具时返回明确错误。
 
@@ -40,7 +40,7 @@ node scripts/build-calculator.mjs --all
 node scripts/package.mjs
 ```
 
-`npm run build` / `build:all` 和三系统 CI 均在已有插件后追加计算插件；安装包生成到 `dist/tools.calculator-0.1.0-<os>-<arch>.zip`，附带 SHA-256。单目标可使用 `--target=windows-amd64` 等参数。
+`npm run build` / `build:all` 和三系统 CI 均在已有插件后追加计算插件；安装包生成到 `dist/tools.calculator-0.2.0-<os>-<arch>.zip`，附带 SHA-256。单目标可使用 `--target=windows-amd64` 等参数。
 
 本次本地验证：macOS arm64 无界面前端用例、Go 竞态测试、Go 静态检查、临时宿主目录安装与搜索、六目标交叉构建和包头校验通过。整仓前端 100 项、Python 2 项及既有原生插件竞态回归通过。测试使用模拟剪贴板调用，不读取或修改真实剪贴板。
 
@@ -50,3 +50,7 @@ node scripts/package.mjs
 ## 首次发行
 
 [0.1.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.calculator-v0.1.0) 已上传 macOS、Windows、Linux 的 arm64/amd64 六目标包与 SHA-256；[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43799988731) 无界面测试及构建通过，安装包已核验清单、图标与原生入口架构。商店资料登记真实发行资产；需支持独立发布标签的司南源码 c518ca5 或更新。真实剪贴板与桌面 UI 验收仍未执行。
+
+## 0.2.0 重构
+
+系统剪贴板调用迁至司南宿主，搜索回车与页面复制均使用 Go SDK 的 `HostFromContext(ctx).ClipboardWrite`。计算、搜索与稿纸存储保持插件职责；删除三端重复适配及其专用测试，宿主接管相应平台测试。需要司南 0.2.0 或更新版本及 [ADR 0066](../../../sinan/docs/adr/0066-host-clipboard-api.md) 能力；已发布 0.1.0 资产保持不变。六目标交叉构建和无界面回归通过不代表真实剪贴板验收。

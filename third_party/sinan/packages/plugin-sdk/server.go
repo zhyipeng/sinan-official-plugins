@@ -8,12 +8,15 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	protocol "sinan/packages/plugin-protocol"
 )
 
 type CommandHandler func(protocol.CommandParams) (protocol.CommandResult, error)
 type Handlers struct {
+	HostReady  func(*HostClient)
 	Initialize func(protocol.InitializeParams) error
 	Command    func(context.Context, protocol.CommandParams) (protocol.CommandResult, error)
 	Search     func(context.Context, protocol.SearchParams) (protocol.SearchResult, error)
@@ -31,10 +34,15 @@ func Serve(in io.Reader, out io.Writer, pluginID string, handler CommandHandler)
 
 func ServeWithHandlers(in io.Reader, out io.Writer, pluginID string, handlers Handlers) error {
 	scanner := bufio.NewScanner(in)
-	scanner.Buffer(make([]byte, 4096), protocol.MaxMessageBytes)
+	scanner.Buffer(make([]byte, 4096), protocol.MaxClipboardMessageBytes)
 	encoder := json.NewEncoder(out)
 	var writeMu, activeMu sync.Mutex
 	active := map[uint64]context.CancelFunc{}
+	host := &HostClient{pending: map[uint64]chan protocol.Response{}, sendSlots: make(chan struct{}, 4), done: make(chan struct{}), send: func(req protocol.Request) error { writeMu.Lock(); defer writeMu.Unlock(); return encoder.Encode(req) }}
+	defer close(host.done)
+	if handlers.HostReady != nil {
+		handlers.HostReady(host)
+	}
 	defer func() {
 		activeMu.Lock()
 		defer activeMu.Unlock()
@@ -58,6 +66,31 @@ func ServeWithHandlers(in io.Reader, out io.Writer, pluginID string, handlers Ha
 	}
 	initialized := false
 	for scanner.Scan() {
+		var envelope struct {
+			Method string `json:"method"`
+		}
+		if json.Unmarshal(scanner.Bytes(), &envelope) != nil {
+			return errors.New("invalid message")
+		}
+		if envelope.Method == "" {
+			var response protocol.Response
+			if json.Unmarshal(scanner.Bytes(), &response) != nil || response.JSONRPC != "2.0" || response.ID == 0 || (response.Error == nil) == (response.Result == nil) {
+				return errors.New("invalid host response")
+			}
+			host.mu.Lock()
+			ch := host.pending[response.ID]
+			host.mu.Unlock()
+			if ch != nil {
+				select {
+				case ch <- response:
+				default:
+				}
+			}
+			continue
+		}
+		if len(scanner.Bytes()) >= protocol.MaxMessageBytes {
+			return errors.New("request too large")
+		}
 		var req protocol.Request
 		if json.Unmarshal(scanner.Bytes(), &req) != nil || req.JSONRPC != "2.0" {
 			return errors.New("invalid request")
@@ -112,7 +145,7 @@ func ServeWithHandlers(in io.Reader, out io.Writer, pluginID string, handlers Ha
 			send(req, nil, &protocol.Error{Code: -32001, Message: "busy"})
 			continue
 		}
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.WithValue(context.Background(), hostContextKey{}, host))
 		active[req.ID] = cancel
 		activeMu.Unlock()
 		go func(req protocol.Request) {
@@ -153,4 +186,87 @@ func ServeWithHandlers(in io.Reader, out io.Writer, pluginID string, handlers Ha
 		}(req)
 	}
 	return scanner.Err()
+}
+
+type hostContextKey struct{}
+
+// HostClient uses the same stdio stream; IDs are independent in each direction.
+type HostClient struct {
+	mu        sync.Mutex
+	next      atomic.Uint64
+	pending   map[uint64]chan protocol.Response
+	sendSlots chan struct{}
+	done      chan struct{}
+	send      func(protocol.Request) error
+}
+
+func HostFromContext(ctx context.Context) *HostClient {
+	h, _ := ctx.Value(hostContextKey{}).(*HostClient)
+	return h
+}
+func (h *HostClient) ClipboardRead(ctx context.Context, sequence uint64) (protocol.ClipboardResult, error) {
+	return h.clipboard(ctx, "clipboard.read", protocol.ClipboardParams{Sequence: sequence})
+}
+func (h *HostClient) ClipboardWrite(ctx context.Context, content protocol.ClipboardContent) error {
+	_, err := h.clipboard(ctx, "clipboard.write", protocol.ClipboardParams{Content: content})
+	return err
+}
+func (h *HostClient) clipboard(ctx context.Context, method string, params protocol.ClipboardParams) (protocol.ClipboardResult, error) {
+	var result protocol.ClipboardResult
+	if h == nil {
+		return result, errors.New("宿主剪贴板 API 不可用")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	id := h.next.Add(1)
+	ch := make(chan protocol.Response, 1)
+	h.mu.Lock()
+	if len(h.pending) >= 4 {
+		h.mu.Unlock()
+		return result, errors.New("宿主调用繁忙")
+	}
+	h.pending[id] = ch
+	h.mu.Unlock()
+	defer func() { h.mu.Lock(); delete(h.pending, id); h.mu.Unlock() }()
+	raw, err := json.Marshal(params)
+	if err != nil || len(raw) > protocol.MaxClipboardMessageBytes-1024 {
+		return result, errors.New("剪贴板内容超出限制")
+	}
+	sent := make(chan error, 1)
+	select {
+	case h.sendSlots <- struct{}{}:
+	case <-ctx.Done():
+		return result, ctx.Err()
+	case <-h.done:
+		return result, io.EOF
+	}
+	go func() {
+		defer func() { <-h.sendSlots }()
+		sent <- h.send(protocol.Request{JSONRPC: "2.0", ID: id, Method: method, Params: raw})
+	}()
+	select {
+	case err = <-sent:
+		if err != nil {
+			return result, err
+		}
+	case <-ctx.Done():
+		return result, ctx.Err()
+	case <-h.done:
+		return result, io.EOF
+	}
+	select {
+	case response := <-ch:
+		if response.Error != nil {
+			return result, response.Error
+		}
+		err = json.Unmarshal(response.Result, &result)
+		return result, err
+	case <-ctx.Done():
+		return result, ctx.Err()
+	case <-h.done:
+		return result, io.EOF
+	}
 }

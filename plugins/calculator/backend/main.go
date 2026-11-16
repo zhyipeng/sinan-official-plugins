@@ -7,6 +7,7 @@ import (
 	"os"
 	protocol "sinan/packages/plugin-protocol"
 	sdk "sinan/packages/plugin-sdk"
+	"slices"
 	"sync"
 )
 
@@ -63,7 +64,12 @@ func search(ctx context.Context, p protocol.SearchParams) (protocol.SearchResult
 	return out, nil
 }
 func main() {
-	if sdk.ServeWithHandlers(os.Stdin, os.Stdout, "tools.calculator", sdk.Handlers{Command: command, Search: search}) != nil {
+	if sdk.ServeWithHandlers(os.Stdin, os.Stdout, "tools.calculator", sdk.Handlers{Initialize: func(p protocol.InitializeParams) error {
+		if !slices.Contains(p.HostCapabilities, protocol.ClipboardCapability) {
+			return errors.New("宿主缺少 clipboard.v1 能力")
+		}
+		return nil
+	}, Command: command, Search: search}) != nil {
 		os.Exit(1)
 	}
 }

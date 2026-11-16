@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +42,7 @@ type item struct {
 	Size    int    `json:"size"`
 }
 type history struct {
+	host     *sdk.HostClient
 	mu       sync.Mutex
 	dir      string
 	items    []item
@@ -245,7 +247,7 @@ func (h *history) watch() {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	for range ticker.C {
-		c, seq, err := readClipboard(h.sequence)
+		c, seq, err := h.readClipboard(h.sequence)
 		h.sequence = seq
 		if err == nil && len(c.Data) > 0 {
 			err = h.capture(c)
@@ -336,7 +338,7 @@ func (h *history) command(ctx context.Context, p protocol.CommandParams) (protoc
 			}
 			return result(map[string]any{"width": w, "height": height, "pixels": thumb.Pix})
 		}
-		if err = writeClipboard(c); err != nil {
+		if err = h.writeClipboard(ctx, c); err != nil {
 			return result(map[string]string{"error": "无法写入系统剪贴板"})
 		}
 		h.last = v.ID
@@ -357,7 +359,10 @@ func (h *history) command(ctx context.Context, p protocol.CommandParams) (protoc
 }
 func main() {
 	h := &history{}
-	_ = sdk.ServeWithHandlers(os.Stdin, os.Stdout, "tools.clipboard", sdk.Handlers{Initialize: func(p protocol.InitializeParams) error {
+	_ = sdk.ServeWithHandlers(os.Stdin, os.Stdout, "tools.clipboard", sdk.Handlers{HostReady: func(host *sdk.HostClient) { h.host = host }, Initialize: func(p protocol.InitializeParams) error {
+		if !slices.Contains(p.HostCapabilities, protocol.ClipboardCapability) {
+			return errors.New("宿主缺少 clipboard.v1 能力")
+		}
 		if err := h.load(p.DataDir); err != nil {
 			return err
 		}

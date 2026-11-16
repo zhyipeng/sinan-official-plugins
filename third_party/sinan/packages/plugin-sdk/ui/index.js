@@ -28,3 +28,7 @@ export function listLLMConfigurations() { return call({method:"llm.config"}); }
 export function startLLM(value) { return call({method:"llm.start",value}); }
 export function pollLLM(input) { return call({method:"llm.poll",input}); }
 export function cancelLLM(input) { return call({method:"llm.cancel",input}); }
+
+// Text calls keep the page bridge's existing budget; binary clipboard uses backend RPC.
+export function readClipboardText() { return call({method:'clipboard.readText'}); }
+export function writeClipboardText(input) { return call({method:'clipboard.writeText',input}); }
