@@ -1,6 +1,6 @@
-# 文字识别 0.2.0（跨平台验证中）
+# 文字识别 0.2.0
 
-状态：已发布的 0.1.0 仍仅有 macOS arm64；当前 0.2.0 新增六目标构建适配，正在进行原生验证，尚未发布新平台资产。已构建并无界面验证 macOS arm64 原生包；其他目标的后台可编译，不代表具备完整 OCR 运行能力。
+状态：0.2.0 已完成六目标原生验证、公开发行并登记商店；0.1.0 的原有 macOS arm64 资产保持不变。六目标均从实际 ZIP 运行无界面识别与回收检查，不代表已完成三端真实桌面/WebView 验收。
 
 ## 使用范围
 
@@ -50,10 +50,10 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 
 | 目标 | 状态与限制 |
 | --- | --- |
-| macOS arm64 | 完整包本地构建与模拟宿主 stdio 识别通过；真实剪贴板、页面、焦点和拆出未验收 |
-| macOS amd64 | 可在对应本机尝试原生构建，本轮未构建或运行 |
-| Windows arm64/amd64 | 后台交叉编译和静态检查通过；已增加 UTF-8 文件路径与 DLL 分发适配，原生 CI 待验证，不登记新资产 |
-| Linux arm64/amd64 | 后台交叉编译和静态检查通过；已增加相对 RPATH 与 Ubuntu 24.04 运行库基线，原生 CI 待验证，不登记新资产 |
+| macOS arm64 | 0.2.0 原生构建、重定位 ZIP、11 图重复识别与回收通过；已发行 |
+| macOS amd64 | 0.2.0 Intel runner 原生构建与相同识别/回收检查通过；已发行 |
+| Windows arm64/amd64 | 0.2.0 原生构建、UTF-8 路径、包内 DLL、无控制台及识别/回收检查通过；已发行 |
+| Linux arm64/amd64 | 0.2.0 原生构建、相对 RPATH 和相同识别/回收检查通过；Ubuntu 24.04/glibc 2.39 + 系统 libstdc++；已发行 |
 
 三端共用任务与管道实现，Windows 子进程显式隐藏控制台。Linux 的剪贴板由宿主区分 X11/xclip 与 Wayland/wl-clipboard；缺少会话或工具会返回错误。OCR 引擎本身不调用桌面协议；不将 X11 成功视为 Wayland 截图能力。
 
@@ -83,7 +83,7 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 
 模型和字典路径仅在构建私有副本中修补为 `std::filesystem::u8path`，原始上游不变；保留严格浮点和 CPU SIMD 运行时分派。Windows 只从对应目标工具链目录收集实际导入的非系统 DLL，缺失或未知依赖明确失败。Linux/macOS 的 worker 使用相对于可执行文件的库路径，重定位测试不依赖 PATH/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH。
 
-待六目标原生构建和合成图验证完成后，再为真实资产记录支持范围；已有 0.1.0 发行包与商店记录保持不变。真实 WebView、输入法、权限和系统剪贴板仍需另行验收。
+六目标原生构建和合成图验证现已完成，0.2.0 仅登记对应的六个真实新资产；已有 0.1.0 发行包与商店记录保持不变。真实 WebView、输入法、权限和系统剪贴板仍需另行验收。
 
 
 跨 ISA 验证记录：终端样本在 ARM 基准中把 `go test ./...` 识别为 `go test /...`，x86 AVX2 路径识别为 `go test ./..`，均漏一个点。报告保留两种实际输出；以源文本编辑距离和字符差均不劣于既有基准、每图两次稳定为质量门槛，不强制复制某一架构的既有识别错误，也不将这种合成测试描述为完美准确率。Windows worker 配合无控制台子系统与 CREATE_NO_WINDOW 避免额外 conhost，回收检查允许最多 5 秒的系统进程枚举收敛，但不忽略残留进程。
@@ -93,3 +93,8 @@ Windows 控制台补充：仅设置 HideWindow/CREATE_NO_WINDOW 仍可能为控�
 
 
 原生验证全部成功后，可手动运行 `.github/workflows/ocr-publish.yml`，填入对应 run ID。发布 job 独立取得写权限，只解析六份 ZIP 和验证报告，不执行其中程序；按原生 run 的源码提交创建标签并发布，核对远端摘要后提供发布身份 JSON。不是普通 commit/tag 自动发布；已公开版本以及摘要不匹配的草稿文件都拒绝覆盖。商店登记仍需使用核验后的实际 Release/Asset ID。
+
+
+## 0.2.0 正式发行记录
+
+[六目标原生验证](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44006353531) 全部成功，源码为 `80eeb9c070c8cb48c3fa61a807ff35b89f975445`；[独立发布 job](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44006913968) 静态复核六份 ZIP 后公开 [0.2.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.2.0)。六个 ZIP 的远端 SHA-256 与公开 assets.json / SHA256SUMS 一致，商店最低宿主仍为 0.3.1。VALIDATION.json 公开合成案例的质量、重复稳定性与进程回收结果。真实系统剪贴板、原生 WebView、输入法、权限与多屏交互仍未验收；macOS 12.0 仅为构建目标，未做旧系统实机验证。
