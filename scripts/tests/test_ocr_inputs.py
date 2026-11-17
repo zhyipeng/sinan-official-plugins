@@ -3,7 +3,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 
 spec = importlib.util.spec_from_file_location("ocr_inputs", Path(__file__).resolve().parents[1] / "prepare-ocr.py")
 inputs = importlib.util.module_from_spec(spec)
@@ -26,7 +26,9 @@ class OCRInputTest(unittest.TestCase):
             archive = root / "toolchain.zip"
             for path in ["../escaped", "/absolute", "source/user.cpp", "toolchain/../../source", "toolchain/C:/file", "toolchain\\escape"]:
                 with ZipFile(archive, "w") as stream:
-                    stream.writestr(path, b"data")
+                    entry = ZipInfo(path)
+                    entry.filename = path  # Preserve raw separators on Windows too.
+                    stream.writestr(entry, b"data")
                 with self.assertRaises(ValueError):
                     inputs.unpack_toolchain(archive, root / "out")
             with ZipFile(archive, "w") as stream:

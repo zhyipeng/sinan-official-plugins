@@ -36,11 +36,12 @@ jobs:
           python-version: '3.12'
       - run: npm ci --ignore-scripts
       - run: python -m pip install cmake==4.4.5 ninja==1.13.2 psutil==7.2.2
-      - name: OCR headless unit tests
-        run: |
-          node --test plugins/ocr/tests/app.test.mjs scripts/tests/ocr-platform.test.mjs
-          go -C plugins/ocr test ./backend ./internal/...
-          python -m unittest discover -s scripts/tests -p "test_*.py"
+      - name: OCR page and build-plan tests
+        run: node --test plugins/ocr/tests/app.test.mjs scripts/tests/ocr-platform.test.mjs
+      - name: OCR backend tests
+        run: go -C plugins/ocr test ./backend ./internal/...
+      - name: Packaging and input validation tests
+        run: python -m unittest discover -s scripts/tests -p "test_*.py"
       - name: Fetch and verify fixed native inputs
         run: python scripts/prepare-ocr.py
       - name: Build, package and run native OCR from the relocated ZIP

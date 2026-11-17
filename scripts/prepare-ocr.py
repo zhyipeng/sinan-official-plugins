@@ -52,7 +52,7 @@ def unpack_toolchain(archive, directory):
             raise ValueError("工具链解压预算超限")
         for item in entries:
             path = PurePosixPath(item.filename)
-            if path.is_absolute() or ".." in path.parts or "\\" in item.filename or ":" in item.filename or not path.parts or path.parts[0] != archive.stem:
+            if path.is_absolute() or ".." in path.parts or "\\" in item.orig_filename or ":" in item.orig_filename or not path.parts or path.parts[0] != archive.stem:
                 raise ValueError("工具链归档路径无效")
             if (item.external_attr >> 16) & 0o170000 == 0o120000:
                 raise ValueError("工具链归档不允许符号链接")
