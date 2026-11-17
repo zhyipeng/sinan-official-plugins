@@ -16,6 +16,7 @@ import threading
 import time
 
 import psutil
+from quality import evaluate, normalize
 
 
 class Host:
@@ -88,6 +89,16 @@ class Host:
         self.p.stdout.close()
 
 
+def wait_no_children(host):
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        children = [p for p in psutil.Process(host.p.pid).children() if p.is_running()]
+        if not children:
+            return
+        time.sleep(0.01)
+    raise AssertionError("unexpected live child processes: " + ", ".join(p.name() for p in children))
+
+
 def wait_worker(host):
     deadline = time.monotonic() + 2
     while time.monotonic() < deadline:
@@ -115,7 +126,6 @@ def main():
     args = parser.parse_args()
     corpus = json.loads(args.corpus.read_text())
     golden = json.loads(args.golden.read_text())["strict_fp"]["cases"]
-    normalize = lambda text: "".join(text.split())
     cases = []
     host = Host(args.package.resolve(), args.sandbox)
     try:
@@ -125,12 +135,18 @@ def main():
             image = (args.corpus.parent / "images" / (fixture["name"] + ".png")).read_bytes()
             result, start_ms = host.recognize(image)
             assert result["state"] == "done", result.get("error")
-            matches = normalize(result.get("text", "")) == normalize(expected["actual"])
+            metrics = evaluate(fixture["expected"], expected["actual"], result.get("text", ""))
+            matches = metrics["matches_native_baseline"]
             cases.append({"name": fixture["name"], "matches_native_baseline": matches,
+                          "quality": metrics,
                           "synthetic_actual_on_difference": result.get("text", "") if not matches else None,
                           "synthetic_reference_on_difference": expected["actual"] if not matches else None, "start_ms": start_ms,
                           "text_sha256": hashlib.sha256(result.get("text", "").encode()).hexdigest()})
             host.command("cancel", result["id"])
+            repeated, _ = host.recognize(image)
+            assert repeated["state"] == "done"
+            cases[-1]["stable_repeated_output"] = normalize(repeated.get("text", "")) == normalize(result.get("text", ""))
+            host.command("cancel", repeated["id"])
         # The session snapshot must win even if the system clipboard has changed.
         reads = host.reads
         host.kind = "text"
@@ -139,7 +155,7 @@ def main():
         assert result["state"] == "done" and host.reads == reads
         assert normalize(result.get("text", "")) == normalize(golden[0]["actual"])
         host.command("cancel", result["id"])
-        assert not psutil.Process(host.p.pid).children()
+        wait_no_children(host)
         host.kind = "text"
         result, _ = host.recognize(b"synthetic text")
         assert result["state"] == "failed"
@@ -179,8 +195,8 @@ def main():
               "os_network_denied": args.sandbox, "real_clipboard_accessed": False}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
-    assert all(case["matches_native_baseline"] for case in cases), "Synthetic output differs from the ARM reference; see validation.json"
-    print("11 synthetic stdio jobs, native baseline, cancellation and backend-death guard passed")
+    assert all(case["quality"]["not_worse_than_baseline"] and case["stable_repeated_output"] for case in cases), "Synthetic quality or repeated output regressed; see validation.json"
+    print("11 synthetic cases (two runs each), source-quality gate, cancellation and backend-death guard passed")
 
 
 if __name__ == "__main__":

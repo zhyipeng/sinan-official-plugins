@@ -84,3 +84,6 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 模型和字典路径仅在构建私有副本中修补为 `std::filesystem::u8path`，原始上游不变；保留严格浮点和 CPU SIMD 运行时分派。Windows 只从对应目标工具链目录收集实际导入的非系统 DLL，缺失或未知依赖明确失败。Linux/macOS 的 worker 使用相对于可执行文件的库路径，重定位测试不依赖 PATH/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH。
 
 待六目标原生构建和合成图验证完成后，再为真实资产记录支持范围；已有 0.1.0 发行包与商店记录保持不变。真实 WebView、输入法、权限和系统剪贴板仍需另行验收。
+
+
+跨 ISA 验证记录：终端样本在 ARM 基准中把 `go test ./...` 识别为 `go test /...`，x86 AVX2 路径识别为 `go test ./..`，均漏一个点。报告保留两种实际输出；以源文本编辑距离和字符差均不劣于既有基准、每图两次稳定为质量门槛，不强制复制某一架构的既有识别错误，也不将这种合成测试描述为完美准确率。Windows worker 使用 CREATE_NO_WINDOW 避免额外 conhost，回收检查允许最多 5 秒的系统进程枚举收敛，但不忽略残留进程。
