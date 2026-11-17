@@ -21,10 +21,14 @@ macOS 自动粘贴须在“系统设置 → 隐私与安全性 → 辅助功能�
 
 [0.2.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.clipboard-v0.2.0) 已公开，三系统 arm64/amd64 六目标 ZIP 与摘要均已上传并核验；[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43806605442) 通过。源码提交 ff690a01a275a3e271faa71603bd4e29a412dc0b，SDK 固定来源为本体 718cc49。最低宿主为 [Sinan v0.2.1](https://github.com/zhyipeng/sinan/releases/tag/v0.2.1)，初始化仍核对 clipboard.v1 能力；该宿主另修复商店版本判定写死的问题。真实剪贴板与桌面 UI 尚未验收。
 
-## 0.2.1 历史排序与图片预览（待发布）
+## 0.2.1 历史排序与图片预览
 
 点击“复制”或执行粘贴，在成功写入系统剪贴板后将该项移到列表首位，保留其他条目的相对顺序和采集时间；排序保存到历史索引，重启后恢复。系统写入失败时顺序不变；复制成功但排序保存失败时明确提示，并保留原顺序。
 
 左侧图片使用按可见区域加载的 64×48 缩略图，最多同时读取两张，缓存最多 200 项；右侧使用独立 PNG 预览，最高 1280×960，在详情区域等比放大并保留完整画面。复杂图片会继续缩小，使 PNG 不超过 128 KiB、命令响应保持在宿主既有 192 KiB 预算内。仅预览降采样，复制仍使用原始图片。页面通过 Canvas / createImageBitmap 解码绘制，不新增网络地址、资源来源或宿主权限。
 
-三端共用 Go 与静态 JS/CSS，沿用 Safari 16.4 / Chromium 119 / Firefox 115 构建目标；未改变系统剪贴板适配、X11/Wayland 依赖、公共协议或 SDK。新增 thumbnail 为本插件内部命令，包内清单与页面一并更新，商店登记与历史发行资产不变。本机通过剪贴板 Go 竞态回归、静态检查、3 项前端无界面测试及六目标交叉构建；未执行 Windows/Linux 目标运行、三端 WebView、DPI、真实剪贴板或交互验收，尚未发布。
+三端共用 Go 与静态 JS/CSS，沿用 Safari 16.4 / Chromium 119 / Firefox 115 构建目标；未改变系统剪贴板适配、X11/Wayland 依赖、公共协议或 SDK。新增 thumbnail 为本插件内部命令，包内清单与页面一并更新，商店登记与历史发行资产不变。本机通过剪贴板 Go 竞态回归、静态检查、3 项前端无界面测试及六目标交叉构建；未执行 Windows/Linux 目标运行、三端 WebView、DPI、真实剪贴板或交互验收。
+
+## 0.2.1 发行结果
+
+[0.2.1 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.clipboard-v0.2.1) 已公开，[发布流水线](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44004573375) 通过全量无界面测试、六目标交叉构建及打包。发布源码为 `23be3220abf7e3cef0277cffbf69710ae4f11c79`，六个公开 ZIP 已回下载核验版本、原生架构、入口执行位、图标、大小及 SHA-256（同时比对随包摘要与 GitHub 资产摘要）。最低宿主仍为 0.2.1；商店使用真实 Release/Asset ID 登记，旧版本资产与历史记录不变。该流水线运行于 macOS runner，不代表 Windows/Linux 目标执行或三平台实机交互验收。
