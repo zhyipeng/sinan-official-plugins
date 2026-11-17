@@ -1,4 +1,4 @@
-OCR third-party components — tools.ocr 0.1.0
+OCR third-party components — tools.ocr 0.2.0
 
 RapidOCRLite v5.0.0a6 (CPU engine)
 Copyright RapidOCR Authors; Apache License 2.0.
@@ -43,3 +43,16 @@ these system libraries are not copied into this package.
 Provenance checked on 2026-11-16. Engine/models remain upstream alpha
 components; this notice records redistribution sources and modifications,
 not a certification of OCR accuracy or platform UI compatibility.
+
+Cross-platform build modifications (0.2.0):
+The private build copy changes model/dictionary ifstream constructors to
+std::filesystem::u8path for Windows UTF-8 paths. Original source checkout is
+unchanged; compiled source modifications are recorded by ENGINE.json.
+
+Windows runtime components, when present:
+LLVM-MinGW 20261104 UCRT, https://github.com/mstorsjo/llvm-mingw/releases/tag/20261104
+Only imported libc++, libunwind and/or winpthreads runtime DLLs are copied
+from the matching target runtime. LLVM and MinGW-w64/winpthreads license
+texts are in RUNTIME-LICENSES. Toolchain programs are not distributed.
+Linux uses host glibc/libstdc++ on the Ubuntu 24.04 baseline; these system
+libraries are not copied into the plugin package.

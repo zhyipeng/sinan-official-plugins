@@ -28,7 +28,8 @@ class Host:
             command = ["/usr/bin/sandbox-exec", "-p", "(version 1)(allow default)(deny network*)", *command]
         env = {key: os.environ[key] for key in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR") if key in os.environ}
         self.p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                  stderr=subprocess.DEVNULL, env=env)
+                                  stderr=subprocess.DEVNULL, env=env,
+                                  creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
         self.incoming = queue.Queue()
         self.image = b""
         self.next_id = 0

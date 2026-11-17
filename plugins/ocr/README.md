@@ -1,6 +1,6 @@
-# 文字识别 0.1.0
+# 文字识别 0.2.0（跨平台验证中）
 
-状态：0.1.0 已公开发行并登记商店，仅提供 macOS arm64 完整包。已构建并无界面验证 macOS arm64 原生包；其他目标的后台可编译，不代表具备完整 OCR 运行能力。
+状态：已发布的 0.1.0 仍仅有 macOS arm64；当前 0.2.0 新增六目标构建适配，正在进行原生验证，尚未发布新平台资产。已构建并无界面验证 macOS arm64 原生包；其他目标的后台可编译，不代表具备完整 OCR 运行能力。
 
 ## 使用范围
 
@@ -42,7 +42,7 @@ macOS 原生组件显式采用与宿主一致的 12.0 最低构建目标，已�
 npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/models --cmake=/绝对路径/cmake --ninja=/绝对路径/ninja
 ```
 
-上游目录必须处于固定提交且无改动；构建不会覆盖它。模型目录包含 `PP-OCRv6_det_small.onnx`、`PP-OCRv6_rec_small.onnx`、`dictionary.txt`，字典从同一识别模型元数据导出。CMake、C++20 编译器及 Go/CGO 是构建依赖；模型/二进制放在 bin 下，不提交到源码。构建只允许当前目标系统与架构，不能把本机二进制重命名成其他目标。
+上游目录必须处于固定提交且无改动；构建不会覆盖它。模型目录包含 `PP-OCRv6_det_small.onnx`、`PP-OCRv6_rec_small.onnx`、`dictionary.txt`，字典从同一识别模型元数据导出。CMake、C++20 编译器及 Go/CGO 是构建依赖；模型/二进制放在 bin 下，不提交到源码。构建只允许当前目标系统与架构，不能把本机二进制重命名成其他目标。macOS 采用 12.0 构建目标，Linux 基线为 Ubuntu 24.04/glibc 2.39；Windows 使用固定 LLVM-MinGW UCRT 工具链，DLL 与所需运行库放在 worker 同目录，包内附运行库许可。
 
 产物在 `bin/targets/<os>-<arch>/ocr`，之后可用 `node scripts/package.mjs` 的既有打包流程收集（其余插件需按已有流程准备）。打包器核对后台/worker 原生架构，保存 Unix worker 执行位，下载包和解压内容均不得超过 64 MiB。此版本已公开 Release 并登记 macOS arm64 商店资产，其他目标不登记。
 
@@ -52,8 +52,8 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 | --- | --- |
 | macOS arm64 | 完整包本地构建与模拟宿主 stdio 识别通过；真实剪贴板、页面、焦点和拆出未验收 |
 | macOS amd64 | 可在对应本机尝试原生构建，本轮未构建或运行 |
-| Windows arm64/amd64 | 后台交叉编译和静态检查通过；完整打包显式不可用，待实现 Unicode 模型路径和 C++ DLL/工具链分发适配 |
-| Linux arm64/amd64 | 后台交叉编译和静态检查通过；完整打包显式不可用，待运行库基线、原生依赖和目标运行验证 |
+| Windows arm64/amd64 | 后台交叉编译和静态检查通过；已增加 UTF-8 文件路径与 DLL 分发适配，原生 CI 待验证，不登记新资产 |
+| Linux arm64/amd64 | 后台交叉编译和静态检查通过；已增加相对 RPATH 与 Ubuntu 24.04 运行库基线，原生 CI 待验证，不登记新资产 |
 
 三端共用任务与管道实现，Windows 子进程显式隐藏控制台。Linux 的剪贴板由宿主区分 X11/xclip 与 Wayland/wl-clipboard；缺少会话或工具会返回错误。OCR 引擎本身不调用桌面协议；不将 X11 成功视为 Wayland 截图能力。
 
@@ -73,3 +73,14 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 
 
 [正式发行包](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.1.0) 已回下载核对摘要、清单、模型、原生架构、执行位、图标与许可。最低宿主为 [Sinan 0.3.1](https://github.com/zhyipeng/sinan/releases/tag/v0.3.1)，0.3.0 已取消发行；使用原始源码标签文档时，以发行说明和商店中的 0.3.1 最低版本为准。没有修改既有发行资产。
+
+
+## 六目标原生验证
+
+手动触发 `.github/workflows/ocr.yml`，分别使用 macOS、Windows、Linux 的 arm64/amd64 原生 runner。`scripts/prepare-ocr.py` 获取固定源提交、模型和字典，Windows 工具链为 LLVM-MinGW 20261104 UCRT（按宿主架构选包，并核对固定 SHA-256）。不会覆盖已有不匹配的源目录或输入文件。
+
+`node scripts/ocr-ci.mjs` 依次构建、仅打包该 OCR 目标，并将实际 ZIP 解压到含空格/中文的临时目录，使用同一批 11 张合成 PNG 验证真实 worker、输入快照、取消和父进程退出回收。macOS 额外用系统机制禁网；Windows/Linux 不将未执行的 OS 级禁网描述为验证通过。各目标上传 ZIP、摘要和验证 JSON，不自动发布或修改商店记录。
+
+模型和字典路径仅在构建私有副本中修补为 `std::filesystem::u8path`，原始上游不变；保留严格浮点和 CPU SIMD 运行时分派。Windows 只从对应目标工具链目录收集实际导入的非系统 DLL，缺失或未知依赖明确失败。Linux/macOS 的 worker 使用相对于可执行文件的库路径，重定位测试不依赖 PATH/LD_LIBRARY_PATH/DYLD_LIBRARY_PATH。
+
+待六目标原生构建和合成图验证完成后，再为真实资产记录支持范围；已有 0.1.0 发行包与商店记录保持不变。真实 WebView、输入法、权限和系统剪贴板仍需另行验收。

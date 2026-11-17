@@ -1,0 +1,50 @@
+{
+  "strict_fp": {
+    "cases": [
+      {
+        "name": "light",
+        "actual": "司南 OCR 离线文字识别\n支持中文 English 混排与数字 2026\n订单编号 SN-20261116，金额 1234.56 元。\n复制结果后，可以继续编辑。"
+      },
+      {
+        "name": "dark",
+        "actual": "司南 OCR 离线文字识别\n支持中文 English 混排与数字 2026\n订单编号 SN-20261116，金额1234.56 元。\n复制结果后，可以继续编辑。"
+      },
+      {
+        "name": "small_12px",
+        "actual": "司南 OCR 离线文字识别\n支持中文 English 混排与数字 2026\n订单编号 SN-20261116，金额 1234.56元。\n复制结果后，可以继续编辑。"
+      },
+      {
+        "name": "low_contrast",
+        "actual": "司南 OCR 离线文字识别\n支持中文 English 混排与数字 2026\n订单编号SN-20261116，金额1234.56元。\n复制结果后，可以继续编辑。"
+      },
+      {
+        "name": "rotated_3deg",
+        "actual": "司南 OCR 离线文字识别\n支持中文 English 混排与数字 2026\n订单编号 SN-20261116，金额1234.56 元。\n复制结果后，可以继续编辑。"
+      },
+      {
+        "name": "transparent",
+        "actual": "司南 OCR 离线文字识别\n支持中文 English 混排与数字 2026\n订单编号 SN-20261116，金额 1234.56 元。\n复制结果后，可以继续编辑。"
+      },
+      {
+        "name": "terminal",
+        "actual": "构建完成 Build completed\ngo test /...\nconst total = price * 1.08;\nif (count <= 10) { return \"OK\"; }\npath: /tmp/sinan-ocr/report.json"
+      },
+      {
+        "name": "dense",
+        "actual": "第01行：离线识别测试 OCR sample 01, total = 12.50\n第02行：离线识别测试 OCR sample 02, total = 24.50\n第03行：离线识别测试 OCR sample 03, total = 36.50\n第04行：离线识别测试 OCR sample 04, total = 48.50\n第05行：离线识别测试 OCR sample 05, total = 60.50\n第06行：离线识别测试 OCR sample 06, total = 72.50\n第07行：离线识别测试 OCR sample 07, total = 84.50\n第08行：离线识别测试 OCR sample 08, total = 96.50\n第09行：离线识别测试 OCR sample 09, total = 108.50\n第10行：离线识别测试 OCR sample 10, total = 120.50\n第11行：离线识别测试 OCR sample 11, total = 132.50\n第12行：离线识别测试 OCR sample 12, total = 144.50\n第13行：离线识别测试 OCR sample 13, total = 156.50\n第14行：离线识别测试 OCR sample 14, total = 168.50\n第15行：离线识别测试 OCR sample 15, total = 180.50\n第16行：离线识别测试 OCR sample 16, total = 192.50\n第17行：离线识别测试 OCR sample 17, total = 204.50\n第18行：离线识别测试 OCR sample 18, total = 216.50\n第19行：离线识别测试 OCR sample 19, total = 228.50\n第20行：离线识别测试 OCR sample 20, total = 240.50\n第21行：离线识别测试 OCR sample 21, total = 252.50\n第22行：离线识别测试 OCR sample 22, total = 264.50\n第23行：离线识别测试 OCR sample 23, total = 276.50\n第24行：离线识别测试 OCR sample 24, total = 288.50"
+      },
+      {
+        "name": "two_columns",
+        "actual": "左栏：项目说明\n右栏：处理状态\n第一步准备图片\n任务已经完成\n第二步识别文字\n图片不会上传\n第三步复制结果\n退出清理内存"
+      },
+      {
+        "name": "table",
+        "actual": "项目\n数量\n金额\n键盘\n2\n399.00\n鼠标\n3\n129.50\n合计\n5\n1186.50"
+      },
+      {
+        "name": "blank",
+        "actual": ""
+      }
+    ]
+  }
+}

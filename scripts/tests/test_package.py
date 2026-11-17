@@ -74,3 +74,17 @@ class PackageTest(unittest.TestCase):
             worker.write_bytes(executable("linux", "amd64"))
             with self.assertRaises(AssertionError):
                 packaging.package(source, out, "linux", "arm64")
+
+
+class OCRLibraryTest(unittest.TestCase):
+    def test_ocr_library_requires_matching_architecture_and_type(self):
+        for os,arch in packaging.TARGETS:
+            data=bytearray(executable(os,arch))
+            if os=="darwin":struct.pack_into("<I",data,12,6)
+            elif os=="windows":struct.pack_into("<H",data,64+22,0x2000)
+            else:struct.pack_into("<H",data,16,3)
+            packaging.verify_native(data,os,arch,library=True)
+            with self.assertRaises(AssertionError):
+                packaging.verify_native(data,os,"amd64" if arch=="arm64" else "arm64",library=True)
+            with self.assertRaises(AssertionError):
+                packaging.verify_native(executable(os,arch),os,arch,library=True)

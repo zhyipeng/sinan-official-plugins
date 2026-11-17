@@ -9,21 +9,23 @@ TARGETS = [(os, arch) for os in ("darwin", "windows", "linux") for arch in ("arm
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def verify_native(data, os, arch):
+def verify_native(data, os, arch, library=False):
     """Do not trust filenames or the environment to label a native executable."""
     if os == "darwin":
         assert len(data) >= 32 and data[:4] == b"\xcf\xfa\xed\xfe", "不是 Mach-O 64 原生入口"
         assert struct.unpack_from("<I", data, 4)[0] == {"arm64": 0x100000C, "amd64": 0x1000007}[arch], "Mach-O 架构不符"
-        assert struct.unpack_from("<I", data, 12)[0] == 2, "Mach-O 入口不是可执行程序"
+        assert struct.unpack_from("<I", data, 12)[0] == (6 if library else 2), "Mach-O 文件类型不符"
     elif os == "windows":
         assert len(data) >= 64 and data[:2] == b"MZ", "不是 PE 原生入口"
         offset = struct.unpack_from("<I", data, 60)[0]
         assert offset + 24 <= len(data) and data[offset:offset + 4] == b"PE\0\0", "PE 头无效"
         assert struct.unpack_from("<H", data, offset + 4)[0] == {"arm64": 0xAA64, "amd64": 0x8664}[arch], "PE 架构不符"
+        if library:
+            assert struct.unpack_from("<H", data, offset + 22)[0] & 0x2000, "PE 文件不是 DLL"
     else:
         assert len(data) >= 64 and data[:6] == b"\x7fELF\x02\x01", "不是 ELF 64 小端入口"
         assert struct.unpack_from("<H", data, 18)[0] == {"arm64": 183, "amd64": 62}[arch], "ELF 架构不符"
-        assert struct.unpack_from("<H", data, 16)[0] in (2, 3), "ELF 入口不是可执行程序"
+        assert struct.unpack_from("<H", data, 16)[0] in ((3,) if library else (2, 3)), "ELF 文件类型不符"
 
 
 def package(source, output, os, arch):
@@ -54,6 +56,8 @@ def package(source, output, os, arch):
                 )
                 if executable:
                     verify_native(payload, os, arch)
+                elif library and manifest["id"] == "tools.ocr":
+                    verify_native(payload, os, arch, library=True)
                 # Identical pure frontend packages have identical bytes on every OS.
                 info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
                 info.create_system = 3

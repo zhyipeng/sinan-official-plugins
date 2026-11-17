@@ -1,0 +1,54 @@
+name: OCR native platform validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: macos-15, target: darwin-arm64}
+          - {runner: macos-15-intel, target: darwin-amd64}
+          - {runner: windows-2022, target: windows-amd64}
+          - {runner: windows-11-arm, target: windows-arm64}
+          - {runner: ubuntu-24.04, target: linux-amd64}
+          - {runner: ubuntu-24.04-arm, target: linux-arm64}
+    runs-on: ${{ matrix.runner }}
+    env:
+      OCR_TARGET: ${{ matrix.target }}
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: plugins/ocr/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts
+      - run: python -m pip install cmake==4.4.5 ninja==1.13.2 psutil==7.2.2
+      - name: OCR headless unit tests
+        run: |
+          node --test plugins/ocr/tests/app.test.mjs scripts/tests/ocr-platform.test.mjs
+          go -C plugins/ocr test ./backend ./internal/...
+          python -m unittest discover -s scripts/tests -p "test_*.py"
+      - name: Fetch and verify fixed native inputs
+        run: python scripts/prepare-ocr.py
+      - name: Build, package and run native OCR from the relocated ZIP
+        run: node scripts/ocr-ci.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr-${{ matrix.target }}
+          path: dist/ocr/${{ matrix.target }}/*
+          if-no-files-found: warn
+          retention-days: 14
