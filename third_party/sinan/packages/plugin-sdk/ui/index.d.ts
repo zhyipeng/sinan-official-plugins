@@ -29,3 +29,10 @@ export function hideWindow(): Promise<null>;
 export function savePNG(commandId:string,input:string): Promise<{saved:boolean}>;
 
 export function openImage(): Promise<UIImage|null>;
+
+export interface DependencyStatus {id:string;pluginId:string;state:string;message:string;optional:boolean;minVersion:string}
+export function readDependencies():Promise<DependencyStatus[]>;
+export function openDependencyManager():Promise<null>;
+export function stageDependencyImage(dependency:string,entryId:string,blob:Blob):Promise<string>;
+export function openDependency(dependency:string,entryId:string,input:{imageHandle:string}):Promise<null>;
+export function discardDependencyImage(imageHandle:string):Promise<null>;

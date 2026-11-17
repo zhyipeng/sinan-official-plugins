@@ -1,17 +1,10 @@
 {
   "source": "sinan",
-  "commit": "a0ad164784c442cbc5079aa10fb2425029e4727e",
+  "commit": "31dc517c5b5b01bee4607d0b3506ede116a12990",
   "files": {
-    "packages/plugin-protocol/protocol.go": "0bdeda000ef9e86b7b128089affb47a79efcd64681be4435b0296c4a4676e03e",
-    "packages/plugin-sdk/server.go": "5bed589dffcf5afb9cc828c995a463acfcf7192e325833e5d96ffaf575a7e5ab",
-    "packages/plugin-sdk/ui/index.js": "45eee3cad9927125b0d58e6f71a85ae9a1ec4cbe39b11e7501432d872d9be9d3",
-    "packages/plugin-sdk/ui/index.d.ts": "97a78ee185d1c988c01b9e2b93a1c7ee04c6c01976c2c91245276b3f30c08215"
-  },
-  "patches": [
-    {
-      "file": "patches/window-execute.patch",
-      "sha256": "270ef9ec292c8ba2e79c62ba45bfac8e23d9307c0e2d0e6161b1fbccc0c8f327",
-      "description": "ADR 0076/0078/0079: hidden execution, session-scoped PNG output, native image import and image-input capability; requires matching host source."
-    }
-  ]
+    "packages/plugin-protocol/protocol.go": "4936c7975e90600d884cc14cd673d8936d4e339e4a64221a755e1ef7670b41b9",
+    "packages/plugin-sdk/server.go": "1d931293dce80990a5a1938068cb89704abdf9690e579372e57dbdf255ba27f0",
+    "packages/plugin-sdk/ui/index.js": "a4b9328970a63694ba6db07610e3985fff075706a34512a85fdd7d1282683b22",
+    "packages/plugin-sdk/ui/index.d.ts": "edc936576f208e1906dc2c351214e6bbab74f333e4a805beb10d937dc1c56a89"
+  }
 }

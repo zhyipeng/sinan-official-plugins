@@ -216,7 +216,10 @@ func (h *HostClient) clipboard(ctx context.Context, method string, params protoc
 	if h == nil {
 		return result, errors.New("宿主剪贴板 API 不可用")
 	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	// Clipboard snapshots up to the protocol ceiling need more than a flat
+	// second; scale the deadline with the maximum allowed payload.
+	budget := 2*time.Second + time.Duration(protocol.MaxClipboardMessageBytes/(512<<10))*100*time.Millisecond
+	ctx, cancel := context.WithTimeout(ctx, budget)
 	defer cancel()
 	if err := ctx.Err(); err != nil {
 		return result, err

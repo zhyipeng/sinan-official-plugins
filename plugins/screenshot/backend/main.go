@@ -251,8 +251,8 @@ func main() {
 	err := sdk.ServeWithHandlers(os.Stdin, os.Stdout, "tools.screenshot", sdk.Handlers{
 		HostReady: func(h *sdk.HostClient) { host = h },
 		Initialize: func(p protocol.InitializeParams) error {
-			if !slices.Contains(p.HostCapabilities, protocol.ClipboardCapability) || !slices.Contains(p.HostCapabilities, protocol.WindowExecuteCapability) || !slices.Contains(p.HostCapabilities, protocol.ImageOutputCapability) || !slices.Contains(p.HostCapabilities, protocol.ImageInputCapability) {
-				return errors.New("请使用支持 clipboard.v1、ui.window-execute.v1 、ui.image-output.v1 和 ui.image-input.v1 的配套宿主（已发布 0.3.1 不支持）")
+			if !slices.Contains(p.HostCapabilities, protocol.ClipboardCapability) || !slices.Contains(p.HostCapabilities, protocol.WindowExecuteCapability) || !slices.Contains(p.HostCapabilities, protocol.ImageOutputCapability) || !slices.Contains(p.HostCapabilities, protocol.ImageInputCapability) || !slices.Contains(p.HostCapabilities, protocol.PluginHandoffCapability) {
+				return errors.New("请使用支持 clipboard.v1、ui.window-execute.v1 、ui.image-output.v1 、ui.image-input.v1 和 ui.plugin-handoff.v1 的配套宿主（已发布 0.3.1 不支持）")
 			}
 			return nil
 		}, Command: s.command})

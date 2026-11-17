@@ -104,6 +104,9 @@
           "file.savePNG",
           "file.openImage",
           "clipboard.read"
+        ],
+        "dependencies": [
+          "ocr"
         ]
       }
     ]
@@ -114,5 +117,19 @@
   "activationEvents": [
     "onCommand:open",
     "onCommand:capture"
+  ],
+  "dependencies": [
+    {
+      "id": "ocr",
+      "pluginId": "tools.ocr",
+      "minVersion": "0.3.0",
+      "optional": true,
+      "entries": [
+        {
+          "id": "recognize-image",
+          "version": "1"
+        }
+      ]
+    }
   ]
 }

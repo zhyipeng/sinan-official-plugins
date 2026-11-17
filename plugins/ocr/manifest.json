@@ -1,7 +1,7 @@
 {
   "id": "tools.ocr",
   "name": "文字识别",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "apiVersion": "1",
   "icon": "icon.svg",
   "runtime": {
@@ -55,6 +55,14 @@
           "clipboard.write",
           "clipboard.read"
         ]
+      }
+    ],
+    "entryPoints": [
+      {
+        "id": "recognize-image",
+        "version": "1",
+        "commandId": "open",
+        "input": "image"
       }
     ]
   },

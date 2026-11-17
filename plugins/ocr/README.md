@@ -1,6 +1,8 @@
-# 文字识别 0.2.0
+# 文字识别 0.3.0（未发布）
 
-状态：0.2.0 已完成六目标原生验证、公开发行并登记商店；0.1.0 的原有 macOS arm64 资产保持不变。六目标均从实际 ZIP 运行无界面识别与回收检查，不代表已完成三端真实桌面/WebView 验收。
+当前源码 0.3.0 新增 recognize-image v1 跨插件公开入口，需要支持 ui.plugin-handoff.v1 的配套新宿主；截图后处理交接后自动识别。尚未发布，以下 0.2.0 / 宿主 0.3.1 兼容声明仅适用于已发布旧版本。
+
+历史：0.2.0 已完成六目标原生验证、公开发行并登记商店；0.1.0 的原有 macOS arm64 资产保持不变。六目标均从实际 ZIP 运行无界面识别与回收检查，不代表已完成三端真实桌面/WebView 验收。
 
 ## 使用范围
 
@@ -98,3 +100,5 @@ Windows 控制台补充：仅设置 HideWindow/CREATE_NO_WINDOW 仍可能为控�
 ## 0.2.0 正式发行记录
 
 [六目标原生验证](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44006353531) 全部成功，源码为 `80eeb9c070c8cb48c3fa61a807ff35b89f975445`；[独立发布 job](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44006913968) 静态复核六份 ZIP 后公开 [0.2.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.2.0)。六个 ZIP 的远端 SHA-256 与公开 assets.json / SHA256SUMS 一致，商店最低宿主仍为 0.3.1。VALIDATION.json 公开合成案例的质量、重复稳定性与进程回收结果。真实系统剪贴板、原生 WebView、输入法、权限与多屏交互仍未验收；macOS 12.0 仅为构建目标，未做旧系统实机验证。
+
+发行兼容基线：Sinan 0.4.0（真实提供 ui.plugin-handoff.v1）；SDK 直接来自该配套宿主源码提交，商店登记以实际发行资产为准。

@@ -45,3 +45,17 @@ export function hideWindow() { return call({method:"window.hide"}); }
 export function savePNG(commandId,input) { return call({method:"file.savePNG",commandId,input}); }
 
 export function openImage() { return call({method:"file.openImage"}); }
+
+export function readDependencies() { return call({method:'dependency.status'}); }
+export function openDependencyManager() { return call({method:'dependency.manage'}); }
+export async function stageDependencyImage(dependency,entryId,blob) {
+ if(!blob||blob.size<1||blob.size>4*1024*1024)throw new Error('OCR 图片须小于 4 MiB，请先裁剪图片');
+ const data=new Uint8Array(await blob.arrayBuffer());
+ const upload=await call({method:'image.upload.start',input:dependency,value:{entryId,size:data.length}});
+ try{
+  for(let offset=0;offset<data.length;offset+=36*1024){let text='';for(const byte of data.subarray(offset,offset+36*1024))text+=String.fromCharCode(byte);await call({method:'image.upload.chunk',input:`${upload.id}:${offset}:${btoa(text)}`});}
+  return (await call({method:'image.upload.finish',input:upload.id})).imageHandle;
+ }catch(error){await call({method:'image.upload.cancel',input:upload.id}).catch(()=>{});throw error;}
+}
+export function openDependency(dependency,entryId,{imageHandle}) { return call({method:'dependency.open',input:dependency,value:{entryId,imageHandle}}); }
+export function discardDependencyImage(imageHandle) { return call({method:'image.upload.cancel',input:imageHandle}); }

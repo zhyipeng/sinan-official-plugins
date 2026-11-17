@@ -27,7 +27,7 @@ def rpc(method,params):
   return value['result']
 def command(name,value=''):return json.loads(rpc('command.execute',{'commandId':name,'input':value})['text'])
 try:
- rpc('initialize',{'apiVersion':'1','pluginId':'tools.screenshot','hostCapabilities':['clipboard.v1','ui.window-execute.v1','ui.image-output.v1','ui.image-input.v1']})
+ rpc('initialize',{'apiVersion':'1','pluginId':'tools.screenshot','hostCapabilities':['clipboard.v1','ui.window-execute.v1','ui.image-output.v1','ui.image-input.v1','ui.plugin-handoff.v1']})
  identifier=command('upload-start')['id']
  for offset in range(0,len(data),36*1024):
   part=data[offset:offset+36*1024];result=command('upload',identifier+':'+str(offset)+':'+base64.b64encode(part).decode());assert result['size']==offset+len(part)

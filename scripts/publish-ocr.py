@@ -151,7 +151,7 @@ def main():
     else:
         assert tagged.strip() == commit, "已有标签对应其他源码，拒绝发布"
     notes = output / "release-notes.md"
-    notes.write_text(f"""文字识别 {version}：六目标原生发行。\n\n最低宿主 Sinan 0.3.1。提供 macOS、Windows、Linux 的 arm64/amd64 六个独立原生包。macOS 采用 12.0 构建目标（旧系统实机未验收）；Windows 使用 UCRT 与包内运行库；Linux 基线为 Ubuntu 24.04/glibc 2.39，系统 libstdc++ 需满足该基线。Linux 剪贴板另需 X11/xclip 或 Wayland/wl-clipboard。\n\n[原生验证](https://github.com/{repository}/actions/runs/{run_id})：各 runner 从含中文/空格路径的实际 ZIP 运行真实 worker；11 张合成图每图两次，源文本错误与字符差不劣于既有基准，并核验取消及父进程退出回收。ARM 与 x86 的终端样本均可能漏一个点，位置不同；阅读顺序和标点仍需人工检查。差异见 VALIDATION.json。macOS 系统级禁网通过，Windows/Linux 未执行 OS 级禁网。\n\n没有进行真实桌面/WebView、输入法、系统剪贴板、权限或多屏交互验收。模型、引擎、字典及运行库来源与许可均在包内。SHA-256 见 SHA256SUMS.txt；已有 0.1.0 资产保持不变。\n""", encoding="utf-8")
+    notes.write_text(f"""文字识别 {version}：六目标原生发行。\n\n最低宿主 Sinan 0.4.0，包含 ui.plugin-handoff.v1 页面交接能力。提供 macOS、Windows、Linux 的 arm64/amd64 六个独立原生包。macOS 采用 12.0 构建目标（旧系统实机未验收）；Windows 使用 UCRT 与包内运行库；Linux 基线为 Ubuntu 24.04/glibc 2.39，系统 libstdc++ 需满足该基线。Linux 剪贴板另需 X11/xclip 或 Wayland/wl-clipboard。\n\n[原生验证](https://github.com/{repository}/actions/runs/{run_id})：各 runner 从含中文/空格路径的实际 ZIP 运行真实 worker；11 张合成图每图两次，源文本错误与字符差不劣于既有基准，并核验取消及父进程退出回收。ARM 与 x86 的终端样本均可能漏一个点，位置不同；阅读顺序和标点仍需人工检查。差异见 VALIDATION.json。macOS 系统级禁网通过，Windows/Linux 未执行 OS 级禁网。\n\n没有进行真实桌面/WebView、输入法、系统剪贴板、权限或多屏交互验收。模型、引擎、字典及运行库来源与许可均在包内。SHA-256 见 SHA256SUMS.txt；已有 0.1.0 资产保持不变。\n""", encoding="utf-8")
     if existing is None:
         gh("release", "create", tag, "--draft", "--verify-tag", "--title", "文字识别 " + version, "--notes-file", str(notes))
     pending = files
@@ -178,7 +178,7 @@ def main():
         assert remote[file.name]["digest"] == "sha256:" + hashlib.sha256(file.read_bytes()).hexdigest()
     published["sourceCommit"] = commit
     published["nativeRunId"] = int(run_id)
-    published["minHostVersion"] = "0.3.1"
+    published["minHostVersion"] = "0.4.0"
     (output / "published.json").write_text(json.dumps(published, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(published["html_url"])
 

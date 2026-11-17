@@ -12,6 +12,7 @@ const ClipboardCapability = "clipboard.v1"
 const WindowExecuteCapability = "ui.window-execute.v1"
 const ImageOutputCapability = "ui.image-output.v1"
 const ImageInputCapability = "ui.image-input.v1"
+const PluginHandoffCapability = "ui.plugin-handoff.v1"
 
 // Image commands carry a host-validated, session-owned PNG (at most 4 MiB).
 const ImageCommandCapability = "ui.image-command.v1"
@@ -100,4 +101,31 @@ type SearchItem struct {
 
 type SearchResult struct {
 	Items []SearchItem `json:"items"`
+}
+
+// Dependencies expose named UI entry points, independently of private commands.
+type EntryRequirement struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+}
+type Dependency struct {
+	ID         string             `json:"id"`
+	PluginID   string             `json:"pluginId"`
+	MinVersion string             `json:"minVersion"`
+	Optional   bool               `json:"optional"`
+	Entries    []EntryRequirement `json:"entries"`
+}
+type EntryPoint struct {
+	ID        string `json:"id"`
+	Version   string `json:"version"`
+	CommandID string `json:"commandId"`
+	Input     string `json:"input"`
+}
+type DependencyStatus struct {
+	ID         string `json:"id"`
+	PluginID   string `json:"pluginId"`
+	State      string `json:"state"`
+	Message    string `json:"message"`
+	Optional   bool   `json:"optional"`
+	MinVersion string `json:"minVersion"`
 }

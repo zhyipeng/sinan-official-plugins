@@ -1,11 +1,11 @@
-import {ready,execute,executeHidden,readLaunch,showWindow,hideWindow,savePNG,openImage,readClipboardImage} from '../../../third_party/sinan/packages/plugin-sdk/ui/index.js';
+import {ready,execute,executeHidden,readLaunch,showWindow,hideWindow,savePNG,openImage,readClipboardImage,readDependencies,stageDependencyImage,openDependency,discardDependencyImage,openDependencyManager} from '../../../third_party/sinan/packages/plugin-sdk/ui/index.js';
 import {decodeChunk,encodeChunk} from './transfer.js';
 import {createEditor} from './editor.js';
 const $=id=>document.getElementById(id);
 let editor=null,hasImage=false,busy=false,disposed=false,epoch=0,job='';
 function status(text,error=false){$('status').textContent=text;$('status').dataset.error=String(error);}
 function refresh(){
- $('start').disabled=$('import').disabled=busy;$('copy').disabled=$('save').disabled=busy||!hasImage;
+ $('start').disabled=$('import').disabled=busy;$('ocr').disabled=busy||!hasImage;$('manage-dependency').disabled=busy;$('copy').disabled=$('save').disabled=busy||!hasImage;
  editor?.setBusy(busy);
 }
 async function command(id,input=''){const result=JSON.parse((await execute(id,input)).text);if(result.error)throw new Error(result.error);return result;}
@@ -56,6 +56,21 @@ async function output(kind){
   if(disposed)return;if(kind==='copy'){await command('copy',upload.id);status('已复制并关闭');await hideWindow();}else{const result=await savePNG('save',upload.id);status(result.saved?'已保存 PNG':'已取消保存');}
  }catch(error){status(error.message||'导出失败',true);}finally{busy=false;refresh();}
 }
+async function recognize(){
+ if(busy||!hasImage||disposed)return;const ticket=epoch;busy=true;refresh();status('正在检查 OCR…');let handle='';
+ try{
+  const dependencies=await readDependencies(),ocr=dependencies.find(dep=>dep.id==='ocr');
+  if(!ocr||ocr.state!=='available'){$('manage-dependency').hidden=false;throw new Error(ocr?.message||'OCR 插件不可用');}
+  $('manage-dependency').hidden=true;
+  const blob=await editor.exportPNG();if(ticket!==epoch||disposed)return;
+  status('正在打开 OCR…');handle=await stageDependencyImage('ocr','recognize-image',blob);
+  if(ticket!==epoch||disposed)return;
+  await openDependency('ocr','recognize-image',{imageHandle:handle});handle='';
+ }catch(error){if(!disposed&&ticket===epoch)status(error.message||'无法打开 OCR',true);}
+ finally{if(handle)await discardDependencyImage(handle).catch(()=>{});if(!disposed){busy=false;refresh();}}
+}
+$('ocr').addEventListener('click',()=>void recognize());
+$('manage-dependency').addEventListener('click',()=>{void openDependencyManager().catch(error=>status(error.message||'无法打开插件中心',true));});
 $('copy').addEventListener('click',()=>void output('copy'));$('save').addEventListener('click',()=>void output('save'));
 $('start').addEventListener('click',()=>void start());
 $('import').addEventListener('click',()=>void loadExternal('file'));
