@@ -1,6 +1,6 @@
 # 剪贴板
 
-`tools.clipboard` 0.2.0，需要司南 0.2.1 或更新版本，初始化检查 `hostCapabilities` 中的 `clipboard.v1`，旧宿主明确拒绝激活。独立安装的官方原生插件，安装时需要明确确认原生信任。
+`tools.clipboard` 0.2.1，需要司南 0.2.1 或更新版本，初始化检查 `hostCapabilities` 中的 `clipboard.v1`，旧宿主明确拒绝激活。独立安装的官方原生插件，安装时需要明确确认原生信任。
 
 `⌘/Ctrl + Shift + V` 打开历史；搜索、↑/↓ 选择、Enter 或“粘贴”会恢复原应用并输入完整条目。也可双击粘贴或点“复制”手动粘贴。支持文本和图片预览、删除与清空。热键可在司南“设置 → 插件快捷键 → 剪贴板历史”中按键录入、恢复默认并保存，重启后保留。热键被占用时可在该处修改，也可按名称搜索打开，冲突见插件中心诊断。
 
@@ -21,7 +21,7 @@ macOS 自动粘贴须在“系统设置 → 隐私与安全性 → 辅助功能�
 
 [0.2.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.clipboard-v0.2.0) 已公开，三系统 arm64/amd64 六目标 ZIP 与摘要均已上传并核验；[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43806605442) 通过。源码提交 ff690a01a275a3e271faa71603bd4e29a412dc0b，SDK 固定来源为本体 718cc49。最低宿主为 [Sinan v0.2.1](https://github.com/zhyipeng/sinan/releases/tag/v0.2.1)，初始化仍核对 clipboard.v1 能力；该宿主另修复商店版本判定写死的问题。真实剪贴板与桌面 UI 尚未验收。
 
-## 历史排序与图片预览（未发布）
+## 0.2.1 历史排序与图片预览（待发布）
 
 点击“复制”或执行粘贴，在成功写入系统剪贴板后将该项移到列表首位，保留其他条目的相对顺序和采集时间；排序保存到历史索引，重启后恢复。系统写入失败时顺序不变；复制成功但排序保存失败时明确提示，并保留原顺序。
 
