@@ -1,6 +1,6 @@
 # 文字识别 0.1.0
 
-状态：准备首次发行和商店登记，仅提供 macOS arm64 完整包。已构建并无界面验证 macOS arm64 原生包；其他目标的后台可编译，不代表具备完整 OCR 运行能力。
+状态：0.1.0 已公开发行并登记商店，仅提供 macOS arm64 完整包。已构建并无界面验证 macOS arm64 原生包；其他目标的后台可编译，不代表具备完整 OCR 运行能力。
 
 ## 使用范围
 
@@ -8,7 +8,7 @@
 
 仍无插件自己的截图选区或文件拖入。图片粘贴事件中的文件项只用于判断图片操作；实际通过宿主系统剪贴板适配读取一次快照，预览和后台都使用这份快照。读取失败、图片超限或平台剪贴板不可用会显示错误，不偷偷使用旧图继续识别。
 
-最低宿主为司南 0.3.0，须包含 `ui.image-command.v1`、`clipboard.v1` 与 UI Bridge 2 扩展；已发布 v0.2.1 不满足要求。后台初始化核对真实能力，商店登记使用实际包含新接口的最低宿主 0.3.0。后台申请 `clipboard.read`；视图独立申请 `clipboard.read` 与 `clipboard.write`，没有网络、存储或系统输入权限。SDK 快照归一到 UPSTREAM.json 记录的本体提交及逐文件摘要。
+最低宿主为司南 0.3.1，须包含 `ui.image-command.v1`、`clipboard.v1` 与 UI Bridge 2 扩展；已发布 v0.2.1 不满足要求。后台初始化核对真实能力，商店登记使用实际包含新接口的最低宿主 0.3.1。后台申请 `clipboard.read`；视图独立申请 `clipboard.read` 与 `clipboard.write`，没有网络、存储或系统输入权限。SDK 快照归一到 UPSTREAM.json 记录的本体提交及逐文件摘要。
 
 ## 任务与进程
 
@@ -44,7 +44,7 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 
 上游目录必须处于固定提交且无改动；构建不会覆盖它。模型目录包含 `PP-OCRv6_det_small.onnx`、`PP-OCRv6_rec_small.onnx`、`dictionary.txt`，字典从同一识别模型元数据导出。CMake、C++20 编译器及 Go/CGO 是构建依赖；模型/二进制放在 bin 下，不提交到源码。构建只允许当前目标系统与架构，不能把本机二进制重命名成其他目标。
 
-产物在 `bin/targets/<os>-<arch>/ocr`，之后可用 `node scripts/package.mjs` 的既有打包流程收集（其余插件需按已有流程准备）。打包器核对后台/worker 原生架构，保存 Unix worker 执行位，下载包和解压内容均不得超过 64 MiB。此版本未推送 Release 或注册商店资产。
+产物在 `bin/targets/<os>-<arch>/ocr`，之后可用 `node scripts/package.mjs` 的既有打包流程收集（其余插件需按已有流程准备）。打包器核对后台/worker 原生架构，保存 Unix worker 执行位，下载包和解压内容均不得超过 64 MiB。此版本已公开 Release 并登记 macOS arm64 商店资产，其他目标不登记。
 
 ## 平台边界
 
@@ -60,7 +60,7 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 ## 验证
 
 - `npm test` 包含页面状态/迟到任务/复制失败测试，以及后台任务、租约、超时、输出预算和假 worker 进程测试；不访问系统剪贴板。
-- `node scripts/check-ocr-backend.mjs --all` 检查六目标后台编译和静态检查，产物位于独立 `bin/ocr-backends`，不会伪装成可发行的 OCR 包。三平台 CI 已加入该检查，远端本轮未执行。
+- `node scripts/check-ocr-backend.mjs --all` 检查六目标后台编译和静态检查，产物位于独立 `bin/ocr-backends`，不会伪装成可发行的 OCR 包。[三平台 CI](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/43830703763) 已通过该检查。
 - `tests/stdio-smoke.py` 使用模拟宿主 Host API 和合成 PNG，对本地真实后台与真实 worker 验证 11 图输出、单任务限制、非图片拒绝、正常取消，以及强杀后台后 worker 退出；`--sandbox` 可在 macOS 系统级禁网运行。
 - 真正的桌面 UI、系统剪贴板、WebView、主题、输入法、拆出和截图权限未验收。没有自动安装到用户日常插件目录。
 
@@ -70,3 +70,6 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 本轮快照 URL 只属于当前视图，新图成功读取后旧 URL 失效；原图资源沿用每会话 256 请求 / 8 MiB 累计交付限制，耗尽后须重新打开插件。主搜索图片识别不会重读系统剪贴板。
 
 本轮无界面结果：官方 108 项 JS/3 项打包及四个后台竞态检查通过；六目标后台 build/vet 通过。模拟宿主的真实 worker 在系统级禁网下通过 11 张合成图、传入快照独立于剪贴板、取消及后台退出回收验证；页面行为使用 VM 假 DOM 测试，未启动真实 WebView 或读取真实剪贴板。
+
+
+[正式发行包](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.1.0) 已回下载核对摘要、清单、模型、原生架构、执行位、图标与许可。最低宿主为 [Sinan 0.3.1](https://github.com/zhyipeng/sinan/releases/tag/v0.3.1)，0.3.0 已取消发行；使用原始源码标签文档时，以发行说明和商店中的 0.3.1 最低版本为准。没有修改既有发行资产。

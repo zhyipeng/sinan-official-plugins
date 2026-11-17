@@ -119,6 +119,6 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 
 ## 离线文字识别
 
-新增 `tools.ocr` 0.1.0，首发准备仅提供 macOS arm64 完整包，最低宿主 0.3.0。主输入框粘贴图片后打开匹配入口，会带入图片、显示原图并自动识别；插件内 Cmd/Ctrl+V 粘图识别，Cmd/Ctrl+C 复制可编辑结果。识别和模型均在本地，不需要 Python 或联网。
+[文字识别 0.1.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.1.0) 已公开并登记商店，首发仅提供 macOS arm64 完整包，最低宿主 [Sinan 0.3.1](https://github.com/zhyipeng/sinan/releases/tag/v0.3.1)。主输入框粘贴图片后打开匹配入口，会带入图片、显示原图并自动识别；插件内 Cmd/Ctrl+V 粘图识别，Cmd/Ctrl+C 复制可编辑结果。识别和模型均在本地，不需要 Python 或联网。
 
 完整原生包、合成图片识别及 worker 回收已在 macOS arm64 无界面验证；Windows/Linux 仅后台编译，尚无完整包，真实系统剪贴板与三端 WebView 未验收。来源与构建方法见[OCR 说明](plugins/ocr/README.md)。SDK 快照已归一到新增会话图片接口的本体提交，商店只登记真实发布资产。
