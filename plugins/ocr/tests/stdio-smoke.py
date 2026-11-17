@@ -112,7 +112,11 @@ def wait_worker(host):
 def wait_exit(process):
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
-        if not process.is_running() or process.status() == psutil.STATUS_ZOMBIE:
+        try:
+            if not process.is_running() or process.status() == psutil.STATUS_ZOMBIE:
+                return
+        except psutil.NoSuchProcess:
+            # The worker may exit between the two observations, especially on Windows.
             return
         time.sleep(0.01)
     raise AssertionError("orphan worker remained alive")
