@@ -1,0 +1,51 @@
+name: Publish validated OCR artifacts
+on:
+  workflow_dispatch:
+    inputs:
+      native_run_id:
+        description: Successful six-target OCR native validation run ID
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ocr-manual-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_REPO: ${{ github.repository }}
+      OCR_NATIVE_RUN_ID: ${{ inputs.native_run_id }}
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify native workflow conclusion and source identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish-ocr.py --check-run
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.native_run_id }}
+          pattern: ocr-*
+          path: dist/ocr-native
+      - name: Validate all six archives and publish without executing plugins
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish-ocr.py
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: ocr-published
+          path: dist/ocr-release/published.json
+          if-no-files-found: error

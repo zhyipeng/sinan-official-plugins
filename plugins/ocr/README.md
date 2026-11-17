@@ -86,7 +86,10 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 待六目标原生构建和合成图验证完成后，再为真实资产记录支持范围；已有 0.1.0 发行包与商店记录保持不变。真实 WebView、输入法、权限和系统剪贴板仍需另行验收。
 
 
-跨 ISA 验证记录：终端样本在 ARM 基准中把 `go test ./...` 识别为 `go test /...`，x86 AVX2 路径识别为 `go test ./..`，均漏一个点。报告保留两种实际输出；以源文本编辑距离和字符差均不劣于既有基准、每图两次稳定为质量门槛，不强制复制某一架构的既有识别错误，也不将这种合成测试描述为完美准确率。Windows worker 使用 CREATE_NO_WINDOW 避免额外 conhost，回收检查允许最多 5 秒的系统进程枚举收敛，但不忽略残留进程。
+跨 ISA 验证记录：终端样本在 ARM 基准中把 `go test ./...` 识别为 `go test /...`，x86 AVX2 路径识别为 `go test ./..`，均漏一个点。报告保留两种实际输出；以源文本编辑距离和字符差均不劣于既有基准、每图两次稳定为质量门槛，不强制复制某一架构的既有识别错误，也不将这种合成测试描述为完美准确率。Windows worker 配合无控制台子系统与 CREATE_NO_WINDOW 避免额外 conhost，回收检查允许最多 5 秒的系统进程枚举收敛，但不忽略残留进程。
 
 
 Windows 控制台补充：仅设置 HideWindow/CREATE_NO_WINDOW 仍可能为控制台子系统程序分配后台 conhost。OCR 后台和 worker 均以 `-H=windowsgui` 构建，不创建 GUI 窗口，仍通过显式继承的 stdio 管道通信；打包器校验两者为 PE32+ GUI 子系统。保留零残留子进程检查，不将 conhost 从断言中静默过滤。
+
+
+原生验证全部成功后，可手动运行 `.github/workflows/ocr-publish.yml`，填入对应 run ID。发布 job 独立取得写权限，只解析六份 ZIP 和验证报告，不执行其中程序；按原生 run 的源码提交创建标签并发布，核对远端摘要后提供发布身份 JSON。不是普通 commit/tag 自动发布；已公开版本以及摘要不匹配的草稿文件都拒绝覆盖。商店登记仍需使用核验后的实际 Release/Asset ID。

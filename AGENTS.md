@@ -20,7 +20,7 @@
 - 根据改动范围运行无界面业务测试、静态检查和目标构建，维护可跨平台运行的测试夹具。文档改动只需检查差异和链接；真实桌面/WebView、焦点、热键、输入法及跨应用交互仅在用户明确要求时验证。
 - 分开记录已实现、可构建、无界面测试通过、实机验收及已发布的平台。未执行的目标检查标为未验证，不以交叉编译代替平台验收。
 - 发布时为真实目标产物记录版本、平台/架构、大小和 SHA-256，核对包内版本、入口及宿主依赖；不覆盖已发布资产，不把未上传或未验证的包登记为已发布支持。
-- 发布以 `<plugin-id>-v<version>` 标签触发 `.github/workflows/release.yml`：在 macOS 跑无界面测试、六目标构建与打包，并创建 GitHub Release（先草稿上传再发布，已存在非草稿版本时拒绝覆盖）。commit/PR 不自动构建，`platforms.yml` 仅手动做三系统全矩阵验证；OCR 完整包通过手动触发 `ocr.yml` 运行六目标原生构建、重定位 ZIP 与合成图片验证；固定上游、模型和 Windows 工具链均校验摘要，仍手动发布，不由普通标签流程自动发布；商店（sinan-plugin-registry）登记仍由人工完成。
+- 发布以 `<plugin-id>-v<version>` 标签触发 `.github/workflows/release.yml`：在 macOS 跑无界面测试、六目标构建与打包，并创建 GitHub Release（先草稿上传再发布，已存在非草稿版本时拒绝覆盖）。commit/PR 不自动构建，`platforms.yml` 仅手动做三系统全矩阵验证；OCR 完整包通过手动触发 `ocr.yml` 运行六目标原生构建、重定位 ZIP 与合成图片验证；固定上游、模型和 Windows 工具链均校验摘要，仍需手动触发 `ocr-publish.yml` 并指定成功的原生验证 run ID 才能发布，不由普通标签流程自动发布；发布步骤只解析产物、不运行插件，拒绝覆盖既有公开资产；商店（sinan-plugin-registry）登记仍由人工完成。
 - 协议与宿主能力变更需核对 sinan 仓库，真实 Release 资产准备完成后再联动 sinan-plugin-registry；不得覆盖其他会话的未提交实现。
 
 
