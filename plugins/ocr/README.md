@@ -44,7 +44,7 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 
 上游目录必须处于固定提交且无改动；构建不会覆盖它。模型目录包含 `PP-OCRv6_det_small.onnx`、`PP-OCRv6_rec_small.onnx`、`dictionary.txt`，字典从同一识别模型元数据导出。CMake、C++20 编译器及 Go/CGO 是构建依赖；模型/二进制放在 bin 下，不提交到源码。构建只允许当前目标系统与架构，不能把本机二进制重命名成其他目标。macOS 采用 12.0 构建目标，Linux 基线为 Ubuntu 24.04/glibc 2.39；Windows 使用固定 LLVM-MinGW UCRT 工具链，DLL 与所需运行库放在 worker 同目录，包内附运行库许可。
 
-产物在 `bin/targets/<os>-<arch>/ocr`，之后可用 `node scripts/package.mjs` 的既有打包流程收集（其余插件需按已有流程准备）。打包器核对后台/worker 原生架构，保存 Unix worker 执行位，下载包和解压内容均不得超过 64 MiB。此版本已公开 Release 并登记 macOS arm64 商店资产，其他目标不登记。
+产物在 `bin/targets/<os>-<arch>/ocr`，之后可用 `node scripts/package.mjs` 的既有打包流程收集（其余插件需按已有流程准备）。打包器核对后台/worker 原生架构，保存 Unix worker 执行位，下载包和解压内容均不得超过 64 MiB。0.2.0 已公开 Release 并登记六目标商店资产；0.1.0 仍仅保留原 macOS arm64 资产。
 
 ## 平台边界
 
