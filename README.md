@@ -125,12 +125,18 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 
 ## 截图插件
 
-新增未发布 **截图**（`tools.screenshot` 0.1.0），提供区域截图、箭头/矩形/文字标注、撤销重做、复制与 PNG 保存。三端原生捕获适配、系统依赖、自动返回和验证边界见[截图说明](plugins/screenshot/README.md)。沿用现有协议、SDK 和权限格式；首版尚未接入 GNOME/KDE Wayland Portal。构建、测试、打包与三平台手动 CI 在既有功能之后追加，不自动安装或发布。
+已发布 **截图**（`tools.screenshot` 0.1.0），提供区域截图、箭头/矩形/文字标注、撤销重做、复制与 PNG 保存。三端原生捕获适配、系统依赖、自动返回和验证边界见[截图说明](plugins/screenshot/README.md)。沿用现有协议、SDK 和权限格式；首版尚未接入 GNOME/KDE Wayland Portal。构建、测试、打包与三平台手动 CI 在既有功能之后追加，不自动安装，发行通过独立标签流程。
 
-截图双入口扩展：搜索“截图”或默认 Command/Ctrl+Shift+A 直接隐藏主窗口并选区，结束后自动进入标注；“截图后处理”仅打开编辑器。需要本轮支持 ui.window-execute.v1 的配套宿主，已发布 v0.3.1 不支持；SDK 来源补丁记录在 UPSTREAM.json。真实热键、授权与三端窗口焦点尚待验收，未发布或登记新资产。
+截图双入口扩展：搜索“截图”或默认 Command/Ctrl+Shift+A 直接隐藏主窗口并选区，结束后自动进入标注；“截图后处理”仅打开编辑器。需要本轮支持 ui.window-execute.v1 的配套宿主，已发布 v0.3.1 不支持；SDK 来源提交及摘要记录在 UPSTREAM.json。真实热键、授权与三端窗口焦点尚待验收，实际发行见下方配套发行记录。
 
 截图后处理已接入固定 Painterro 1.2.92：保留双入口、热键、复制保存及取消时不显示编辑器，新增组件的裁剪、像素化、画笔和缩放工具。采用私有源码适配和静态 CSS/DOM SVG/Canvas 文字，不放宽宿主 CSP；详情见[截图说明](plugins/screenshot/README.md)。本轮仅无界面验证与六目标构建/打包，尚未实机验收或发布。
 
-截图 OCR 交接：本轮新增可选依赖 tools.ocr ≥ 0.3.0 与公开入口 recognize-image v1，截图交出当前编辑结果并在原窗口打开 OCR 识别。需要 ui.plugin-handoff.v1 新宿主；截图 0.1.0 和 OCR 0.3.0 尚未发布，不代表已有商店资产。依赖不足保留截图功能，失败保留原页面。
+截图 OCR 交接：本轮新增可选依赖 tools.ocr ≥ 0.3.0 与公开入口 recognize-image v1，截图交出当前编辑结果并在原窗口打开 OCR 识别。需要 ui.plugin-handoff.v1 新宿主；截图 0.1.0 和 OCR 0.3.0 已提供六目标公开发行包。依赖不足保留截图功能，失败保留原页面。
 
 本轮发布配套：截图 0.1.0、OCR 0.3.0 的最低宿主为 Sinan 0.4.0。SDK 快照直接归一至宿主源码提交 31dc517c5b5b01bee4607d0b3506ede116a12990，逐文件摘要可直接复核，旧增量补丁已合并进该来源提交。
+
+## 2026-11-17 配套发行
+
+[截图 0.1.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.1.0) 与 [OCR 0.3.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.3.0) 已公开，均为六目标包，最低宿主 [Sinan 0.4.0](https://github.com/zhyipeng/sinan/releases/tag/v0.4.0)。SDK 直接来自配套宿主提交 31dc517；旧版记录和不可变资产保留。
+
+[截图发布流水线](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44070601312)、[OCR 六目标原生验证](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44071389046)及[正式发布](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44072351423)通过。首次 Windows 验证的进程退出观测竞态已修复并补充三项测试，六目标重验全部通过。运行构建和无界面/原生合成图验证不代表真实桌面/WebView、剪贴板、授权和多屏验收。

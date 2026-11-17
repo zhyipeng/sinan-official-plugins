@@ -1,6 +1,6 @@
-# 文字识别 0.3.0（未发布）
+# 文字识别 0.3.0
 
-当前源码 0.3.0 新增 recognize-image v1 跨插件公开入口，需要支持 ui.plugin-handoff.v1 的配套新宿主；截图后处理交接后自动识别。尚未发布，以下 0.2.0 / 宿主 0.3.1 兼容声明仅适用于已发布旧版本。
+当前源码 0.3.0 新增 recognize-image v1 跨插件公开入口，需要支持 ui.plugin-handoff.v1 的配套新宿主；截图后处理交接后自动识别。现已提供六目标公开发行包，最低宿主 Sinan 0.4.0；0.2.0 / 宿主 0.3.1 兼容声明仅适用于旧版。
 
 历史：0.2.0 已完成六目标原生验证、公开发行并登记商店；0.1.0 的原有 macOS arm64 资产保持不变。六目标均从实际 ZIP 运行无界面识别与回收检查，不代表已完成三端真实桌面/WebView 验收。
 
@@ -10,7 +10,7 @@
 
 仍无插件自己的截图选区或文件拖入。图片粘贴事件中的文件项只用于判断图片操作；实际通过宿主系统剪贴板适配读取一次快照，预览和后台都使用这份快照。读取失败、图片超限或平台剪贴板不可用会显示错误，不偷偷使用旧图继续识别。
 
-最低宿主为司南 0.3.1，须包含 `ui.image-command.v1`、`clipboard.v1` 与 UI Bridge 2 扩展；已发布 v0.2.1 不满足要求。后台初始化核对真实能力，商店登记使用实际包含新接口的最低宿主 0.3.1。后台申请 `clipboard.read`；视图独立申请 `clipboard.read` 与 `clipboard.write`，没有网络、存储或系统输入权限。SDK 快照归一到 UPSTREAM.json 记录的本体提交及逐文件摘要。
+当前 0.3.0 最低宿主为司南 0.4.0，须支持 ui.plugin-handoff.v1；原有图片接口包括 `ui.image-command.v1`、`clipboard.v1` 与 UI Bridge 2 扩展；已发布 v0.2.1 不满足要求。后台初始化核对真实能力，旧版 0.2.0 仍保留最低宿主 0.3.1 的历史登记。后台申请 `clipboard.read`；视图独立申请 `clipboard.read` 与 `clipboard.write`，没有网络、存储或系统输入权限。SDK 快照归一到 UPSTREAM.json 记录的本体提交及逐文件摘要。
 
 ## 任务与进程
 
@@ -102,3 +102,7 @@ Windows 控制台补充：仅设置 HideWindow/CREATE_NO_WINDOW 仍可能为控�
 [六目标原生验证](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44006353531) 全部成功，源码为 `80eeb9c070c8cb48c3fa61a807ff35b89f975445`；[独立发布 job](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44006913968) 静态复核六份 ZIP 后公开 [0.2.0 Release](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.2.0)。六个 ZIP 的远端 SHA-256 与公开 assets.json / SHA256SUMS 一致，商店最低宿主仍为 0.3.1。VALIDATION.json 公开合成案例的质量、重复稳定性与进程回收结果。真实系统剪贴板、原生 WebView、输入法、权限与多屏交互仍未验收；macOS 12.0 仅为构建目标，未做旧系统实机验证。
 
 发行兼容基线：Sinan 0.4.0（真实提供 ui.plugin-handoff.v1）；SDK 直接来自该配套宿主源码提交，商店登记以实际发行资产为准。
+
+## 0.3.0 发行结果
+
+[六目标正式发行](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.3.0)已完成，最低宿主 0.4.0。[原生验证](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44071389046)在对应 OS/架构从实际 ZIP 的中文/空格路径运行真实 worker，每图两次共 11 张合成图，校验质量、稳定性、取消和父进程退出回收；Windows 退出观测竞态已修复并补充三项单元用例。macOS 额外通过 OS 级禁网，Windows/Linux 未执行 OS 级禁网。动态库、模型、摘要及报告由[发布流程](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44072351423)再次静态核验。真实桌面/WebView 与系统剪贴板交互仍未验收。

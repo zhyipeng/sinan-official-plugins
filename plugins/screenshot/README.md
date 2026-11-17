@@ -1,6 +1,6 @@
 # 截图（tools.screenshot）
 
-未发布的 0.1.0 独立官方插件，提供两个搜索入口：
+已公开发行的 0.1.0 独立官方插件，提供两个搜索入口：
 
 - **截图**：隐藏 Sinan 主窗口，直接进入区域选择；完成后自动进入后处理。
 - **截图后处理**：直接打开编辑器；页面的“区域截图”按钮也会隐藏窗口并在完成后自动返回。
@@ -42,13 +42,13 @@ python3 scripts/check-screenshot.py
 
 输出在 `bin/targets/<os>-<arch>/screenshot`。已接入通用 build、test、package 与三平台手动 CI；源码和交叉构建不代表真实系统支持或正式发行。包由通用打包器核验 Mach-O/PE/ELF 与 .exe 入口，Windows 后台使用 GUI 子系统。
 
-本轮在 macOS arm64 通过 121 项 JS、11 项 Python、五个后台竞态检查、截图六目标构建/静态检查及通用打包；具体结果见宿主仓库 `docs/adr/0076-hidden-window-commands.md`。未读取真实屏幕/系统剪贴板、触发授权或启动原生窗口/浏览器；Windows/Linux 原生工具执行、三端 WebView/焦点/多屏/DPI 均未实机验收。未发布、未登记商店、未修改现有安装。
+本轮在 macOS arm64 通过 121 项 JS、11 项 Python、五个后台竞态检查、截图六目标构建/静态检查及通用打包；具体结果见宿主仓库 `docs/adr/0076-hidden-window-commands.md`。未读取真实屏幕/系统剪贴板、触发授权或启动原生窗口/浏览器；Windows/Linux 原生工具执行、三端 WebView/焦点/多屏/DPI 均未实机验收。当时尚未发行；最终发行见下方记录，未修改现有安装。
 
 ## Painterro 私有适配
 
 不使用 CDN、运行时 style 元素、字体、dom-to-image、data/blob 图片 URL 或组件自带原生剪贴板入口。构建从原包源码生成静态样式、DOM SVG 图标和 Canvas 文字渲染，原图直接由 ImageBitmap 绘入 Canvas；文件/URL 打开、图片粘贴拼接、尺寸扩展和滤镜入口未开放。复制/保存仍通过原有受控桥，宿主 CSP、资源类型与调用预算不变。原包来源和文件摘要记录在 painterro-upstream.json，构建补丁在 scripts/painterro-csp.mjs，包内含完整 MIT 许可。
 
-本轮 127 项 JS、11 项 Python 与五个后台竞态检查通过；六目标构建、通用打包、宿主严格 UI 资源加载和包校验通过。实际组件在 linkedom/模拟 Canvas 中验证，不是浏览器或 WebView 实机验收。界面 4 个资源、149,935 字节；仍须配套本轮支持 ui.window-execute.v1 的宿主，已发布 v0.3.1 不支持。三端中文输入、CSP/图标、焦点和多屏/DPI 未实机验证，未发布或修改现有安装。
+本轮 127 项 JS、11 项 Python 与五个后台竞态检查通过；六目标构建、通用打包、宿主严格 UI 资源加载和包校验通过。实际组件在 linkedom/模拟 Canvas 中验证，不是浏览器或 WebView 实机验收。界面 4 个资源、149,935 字节；仍须配套本轮支持 ui.window-execute.v1 的宿主，已发布 v0.3.1 不支持。三端中文输入、CSP/图标、焦点和多屏/DPI 未实机验证，当时尚未发行；最终发行见下方记录，未修改现有安装。
 
 ## 导入与粘贴图片
 
@@ -60,6 +60,10 @@ python3 scripts/check-screenshot.py
 
 后处理增加“OCR 识别”，导出当前编辑结果并在原窗口跳转 OCR 自动识别；成功后释放截图编辑历史，目标未准备成功则保留原页面。依赖 tools.ocr ≥ 0.3.0 的 recognize-image v1 公开入口，属于可选依赖；未安装、禁用或版本不足只影响 OCR，并提供前往插件中心入口（进入插件中心会离开当前页面）。已发布 OCR 0.2.0 不满足公开入口要求。
 
-需支持 ui.plugin-handoff.v1 的本轮新宿主；图片暂存不经过系统剪贴板或文件路径，交接 PNG 限 4 MiB/1600 万像素，超出先裁剪。上传采用独立有界数据帧预算，句柄绑定源会话与目标入口，撤销和超时清理。截图 0.1.0 与 OCR 0.3.0 均未发布，商店记录不变。
+需支持 ui.plugin-handoff.v1 的本轮新宿主；图片暂存不经过系统剪贴板或文件路径，交接 PNG 限 4 MiB/1600 万像素，超出先裁剪。上传采用独立有界数据帧预算，句柄绑定源会话与目标入口，撤销和超时清理。截图 0.1.0 与 OCR 0.3.0 均已公开发行，旧版记录不变。
 
 发行兼容基线：Sinan 0.4.0（真实提供 ui.plugin-handoff.v1）；SDK 直接来自该配套宿主源码提交，商店登记以实际发行资产为准。
+
+## 发行结果
+
+[0.1.0 六目标发行](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.1.0)已完成，最低宿主 Sinan 0.4.0，可选 OCR ≥ 0.3.0。[发布流水线](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44070601312)通过，六份 ZIP 已回下载核对版本、依赖、原生入口/架构、大小、SHA-256 和图标一致性。真实截图、WebView 和权限交互尚未实机验收。
