@@ -1,8 +1,11 @@
+import {drawPixels,drawPNG,thumbnailLoader} from './images.js';
 import {pasteFailureMessage} from './platform.js';
 import {ready,execute,pasteToPreviousApp} from '../../../third_party/sinan/packages/plugin-sdk/ui/index.js';
 const $=id=>document.getElementById(id);
 let clearPending=false;
 let items=[],selected='',busy=false,loading=false,previewTicket=0,lastPreview='',queryTicket=0;
+const thumbnails=thumbnailLoader(id=>command('thumbnail',id));
+const thumbnailObserver=new IntersectionObserver(entries=>{for(const entry of entries){if(!entry.isIntersecting)continue;thumbnailObserver.unobserve(entry.target);const canvas=entry.target;void thumbnails(canvas.dataset.id).then(data=>{if(canvas.isConnected)drawPixels(canvas,data);}).catch(()=>{if(canvas.isConnected)canvas.replaceWith(document.createTextNode('▧'));});}},{root:$('list'),rootMargin:'64px'});
 const date=value=>new Date(value).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 async function command(id,input=''){const result=await execute(id,input);const value=JSON.parse(result.text);if(value?.error)throw new Error(value.error);return value;}
 function status(message){$('status').textContent=message;}
@@ -14,16 +17,15 @@ async function preview(){
  if(item.kind==='text'){const data=await command('preview',item.id);if(ticket!==previewTicket)return;$('text').textContent=data?.text??item.text;if(data?.truncated)$('meta').textContent+='　预览已截断';}
  if(item.kind==='image'){
   const data=await command('preview',item.id);if(ticket!==previewTicket||!data)return;
-  const canvas=$('image');canvas.width=data.width;canvas.height=data.height;
-  const binary=atob(data.pixels),pixels=Uint8ClampedArray.from(binary,ch=>ch.charCodeAt(0));
-  canvas.getContext('2d').putImageData(new ImageData(pixels,data.width,data.height),0,0);canvas.hidden=false;
+  await drawPNG($('image'),data,()=>ticket===previewTicket);
  }
 }
 function render(){
- const list=$('list');list.replaceChildren();
+ const list=$('list');thumbnailObserver.disconnect();list.replaceChildren();
  for(const item of items){
   const row=document.createElement('button');row.type='button';row.className='row';row.id=`item-${item.id}`;row.setAttribute('role','option');row.setAttribute('aria-selected',String(item.id===selected));row.tabIndex=-1;
   const icon=document.createElement('span');icon.className='kind';icon.textContent=item.kind==='image'?'▧':'≡';icon.setAttribute('aria-hidden','true');
+  if(item.kind==='image'){const canvas=document.createElement('canvas');canvas.className='thumbnail';canvas.dataset.id=item.id;icon.replaceChildren(canvas);thumbnailObserver.observe(canvas);}
   const content=document.createElement('span'),title=document.createElement('span'),time=document.createElement('span');title.className='title';title.textContent=item.kind==='image'?'图片':item.text.replace(/\s+/g,' ')||'空白文本';time.className='time';time.textContent=date(item.created);content.append(title,time);row.append(icon,content);
   row.addEventListener('click',()=>select(item.id));row.addEventListener('dblclick',()=>act('paste'));list.append(row);
  }
@@ -35,9 +37,10 @@ async function refresh(){
  try{const data=await command('list',$('search').value);if(ticket!==queryTicket){setTimeout(()=>void refresh(),0);return;}const signature=JSON.stringify(data.items);if(signature!==JSON.stringify(items)){items=data.items;if(!items.some(item=>item.id===selected))selected=items[0]?.id??'';render();if(lastPreview!==selected){lastPreview=selected;await preview();}}status(data.status||`${items.length} 条`);controls();}catch(error){status(error.message);}finally{loading=false;}
 }
 async function act(action){
- if(busy||!selected)return;busy=true;controls();
+ if(busy||!selected)return;const id=selected;busy=true;controls();
  try{
-  await command(action==='remove'?'delete':'select',selected);
+  await command(action==='remove'?'delete':'select',id);
+  if(action!=='remove'){queryTicket++;const index=items.findIndex(item=>item.id===id);if(index>0){items.unshift(...items.splice(index,1));render();}$('list').scrollTop=0;}
   if(action==='paste'){await pasteToPreviousApp();status('正在粘贴…');}
   else if(action==='copy')status('已复制');else{selected='';lastPreview='';}
  }catch(error){status(action==='paste'?pasteFailureMessage(error.message,navigator.platform):error.message);}finally{busy=false;controls();if(action==='remove')await refresh();}

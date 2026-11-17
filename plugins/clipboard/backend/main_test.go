@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	protocol "sinan/packages/plugin-protocol"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -77,9 +79,9 @@ func TestImagesAndFullTextSearchStayWithinBridgeBudget(t *testing.T) {
 	}
 	var preview struct {
 		Width, Height int
-		Pixels        []byte
+		PNG           []byte
 	}
-	if json.Unmarshal([]byte(r.Text), &preview) != nil || preview.Width > 160 || preview.Height > 120 || len(preview.Pixels) != preview.Width*preview.Height*4 {
+	if json.Unmarshal([]byte(r.Text), &preview) != nil || preview.Width <= 160 || preview.Height <= 120 || len(preview.PNG) == 0 {
 		t.Fatal("invalid preview")
 	}
 	_ = h.capture(textContent(strings.Repeat("前", 200) + "needle"))
@@ -117,5 +119,103 @@ func TestDeleteClearAndCorruptIndex(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "history.json"), []byte("broken fixture"), 0600)
 	if (&history{}).load(dir) == nil {
 		t.Fatal("corrupt index overwritten")
+	}
+}
+
+func TestSelectionPromotesOnlyAfterCopyAndPersists(t *testing.T) {
+	h := &history{}
+	dir := t.TempDir()
+	if err := h.load(dir); err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []string{"first", "second", "third"} {
+		if err := h.capture(textContent(value)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old := slices.Clone(h.items)
+	copied := old[2]
+	fail := func(context.Context, content) error { return errors.New("fixture failure") }
+	r, err := h.selectItem(context.Background(), 2, textContent("first"), fail)
+	if err != nil || !strings.Contains(r.Text, "error") || !slices.Equal(h.items, old) {
+		t.Fatal("failed write changed order")
+	}
+	write := func(_ context.Context, c content) error {
+		if digest(c) != copied.ID {
+			t.Fatal("copied wrong content")
+		}
+		return nil
+	}
+	r, err = h.selectItem(context.Background(), 2, textContent("first"), write)
+	if err != nil || r.Text != "null" || h.items[0] != copied || h.items[1] != old[0] || h.items[2] != old[1] {
+		t.Fatal("selection did not promote stably")
+	}
+	if h.last != copied.ID {
+		t.Fatal("selection did not suppress recapture")
+	}
+	if err := h.capture(textContent("first")); err != nil || len(h.items) != 3 || h.items[0] != copied {
+		t.Fatal("watch changed selection")
+	}
+	reloaded := &history{}
+	if err := reloaded.load(dir); err != nil || !slices.Equal(reloaded.items, h.items) {
+		t.Fatal("selection order not durable")
+	}
+	before := slices.Clone(h.items)
+	h.dir = filepath.Join(dir, "missing")
+	r, err = h.selectItem(context.Background(), 1, textContent("third"), func(context.Context, content) error { return nil })
+	if err != nil || !strings.Contains(r.Text, "已复制") || !slices.Equal(before, h.items) {
+		t.Fatal("save failure lost ordering or copy status")
+	}
+}
+
+func TestImagePreviewSizesAndBudgets(t *testing.T) {
+	for _, size := range []image.Point{{1800, 1200}, {1200, 1800}, {1, 2000}, {2000, 1}, {8, 6}} {
+		t.Run(fmt.Sprint(size), func(t *testing.T) {
+			img := image.NewNRGBA(image.Rect(0, 0, size.X, size.Y))
+			seed := uint32(42)
+			for i := 0; i < len(img.Pix); i += 4 {
+				seed ^= seed << 13
+				seed ^= seed >> 17
+				seed ^= seed << 5
+				img.Pix[i] = byte(seed)
+				img.Pix[i+1] = byte(seed >> 8)
+				img.Pix[i+2] = byte(seed >> 16)
+				img.Pix[i+3] = 255
+			}
+			var b bytes.Buffer
+			if err := png.Encode(&b, img); err != nil {
+				t.Fatal(err)
+			}
+			for _, thumbnail := range []bool{false, true} {
+				r, err := imagePreview(b.Bytes(), thumbnail)
+				if err != nil {
+					t.Fatal(err)
+				}
+				encoded, _ := json.Marshal(r)
+				if len(encoded) > 192<<10 {
+					t.Fatal("image exceeds bridge result budget")
+				}
+				var data struct {
+					Width, Height int
+					PNG, Pixels   []byte
+				}
+				if err := json.Unmarshal([]byte(r.Text), &data); err != nil {
+					t.Fatal(err)
+				}
+				if data.Width < 1 || data.Height < 1 {
+					t.Fatal("empty preview")
+				}
+				if thumbnail {
+					if data.Width > 64 || data.Height > 48 || len(data.Pixels) != data.Width*data.Height*4 {
+						t.Fatal("invalid thumbnail")
+					}
+				} else {
+					decoded, err := png.Decode(bytes.NewReader(data.PNG))
+					if err != nil || decoded.Bounds().Dx() != data.Width || decoded.Bounds().Dy() != data.Height || data.Width > 1280 || data.Height > 960 {
+						t.Fatal("invalid detail PNG")
+					}
+				}
+			}
+		})
 	}
 }

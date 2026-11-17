@@ -45,6 +45,11 @@
         "id": "clear",
         "title": "清空历史",
         "searchOnly": true
+      },
+      {
+        "id": "thumbnail",
+        "title": "读取图片缩略图",
+        "searchOnly": true
       }
     ],
     "uiViews": [
@@ -57,7 +62,8 @@
           "preview",
           "select",
           "delete",
-          "clear"
+          "clear",
+          "thumbnail"
         ],
         "permissions": [
           "input.paste"

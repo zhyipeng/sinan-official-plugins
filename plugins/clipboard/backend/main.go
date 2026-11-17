@@ -284,7 +284,7 @@ func (h *history) command(ctx context.Context, p protocol.CommandParams) (protoc
 			}
 		}
 		return result(map[string]any{"items": rows, "status": h.status})
-	case "preview", "select", "delete":
+	case "preview", "select", "delete", "thumbnail":
 		index := -1
 		for i, v := range h.items {
 			if v.ID == p.Input {
@@ -310,7 +310,7 @@ func (h *history) command(ctx context.Context, p protocol.CommandParams) (protoc
 		if err != nil {
 			return result(map[string]string{"error": "无法读取条目"})
 		}
-		if p.CommandID == "preview" {
+		if p.CommandID == "preview" || p.CommandID == "thumbnail" {
 			if c.Kind != "image" {
 				r := []rune(string(c.Data))
 				truncated := len(r) > 16000
@@ -319,30 +319,9 @@ func (h *history) command(ctx context.Context, p protocol.CommandParams) (protoc
 				}
 				return result(map[string]any{"text": string(r), "truncated": truncated})
 			}
-			img, err := png.Decode(bytes.NewReader(c.Data))
-			if err != nil {
-				return result(nil)
-			}
-			bounds := img.Bounds()
-			w := min(bounds.Dx(), 160)
-			height := max(1, bounds.Dy()*w/bounds.Dx())
-			if height > 120 {
-				height = 120
-				w = max(1, bounds.Dx()*height/bounds.Dy())
-			}
-			thumb := image.NewNRGBA(image.Rect(0, 0, w, height))
-			for y := 0; y < height; y++ {
-				for x := 0; x < w; x++ {
-					thumb.Set(x, y, img.At(bounds.Min.X+x*bounds.Dx()/w, bounds.Min.Y+y*bounds.Dy()/height))
-				}
-			}
-			return result(map[string]any{"width": w, "height": height, "pixels": thumb.Pix})
+			return imagePreview(c.Data, p.CommandID == "thumbnail")
 		}
-		if err = h.writeClipboard(ctx, c); err != nil {
-			return result(map[string]string{"error": "无法写入系统剪贴板"})
-		}
-		h.last = v.ID
-		return result(nil)
+		return h.selectItem(ctx, index, c, h.writeClipboard)
 	case "clear":
 		old := h.items
 		h.items = []item{}
@@ -357,6 +336,65 @@ func (h *history) command(ctx context.Context, p protocol.CommandParams) (protoc
 	}
 	return protocol.CommandResult{}, errors.New("未知命令")
 }
+
+// Called with h.mu held. A failed clipboard write must never change history order.
+func (h *history) selectItem(ctx context.Context, index int, c content, write func(context.Context, content) error) (protocol.CommandResult, error) {
+	if err := write(ctx, c); err != nil {
+		return result(map[string]string{"error": "无法写入系统剪贴板"})
+	}
+	v := h.items[index]
+	h.last = v.ID
+	if index > 0 {
+		old := append([]item(nil), h.items...)
+		copy(h.items[1:index+1], h.items[:index])
+		h.items[0] = v
+		if h.save() != nil {
+			h.items = old
+			return result(map[string]string{"error": "已复制，但无法保存历史排序"})
+		}
+	}
+	return result(nil)
+}
+
+// PNG keeps detail previews sharp while respecting the existing 192 KiB UI result budget.
+// Thumbnails use small raw buffers to avoid an image decoder for every list row.
+func imagePreview(data []byte, thumbnail bool) (protocol.CommandResult, error) {
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		return result(map[string]string{"error": "无法解码图片"})
+	}
+	maxWidth, maxHeight := 1280, 960
+	if thumbnail {
+		maxWidth, maxHeight = 64, 48
+	}
+	bounds := img.Bounds()
+	w := min(bounds.Dx(), maxWidth)
+	height := max(1, bounds.Dy()*w/bounds.Dx())
+	if height > maxHeight {
+		height = maxHeight
+		w = max(1, bounds.Dx()*height/bounds.Dy())
+	}
+	for {
+		preview := image.NewNRGBA(image.Rect(0, 0, w, height))
+		for y := 0; y < height; y++ {
+			for x := 0; x < w; x++ {
+				preview.Set(x, y, img.At(bounds.Min.X+x*bounds.Dx()/w, bounds.Min.Y+y*bounds.Dy()/height))
+			}
+		}
+		if thumbnail {
+			return result(map[string]any{"width": w, "height": height, "pixels": preview.Pix})
+		}
+		var encoded bytes.Buffer
+		if err := png.Encode(&encoded, preview); err != nil {
+			return result(map[string]string{"error": "无法生成图片预览"})
+		}
+		if encoded.Len() <= 128<<10 {
+			return result(map[string]any{"width": w, "height": height, "png": encoded.Bytes()})
+		}
+		w, height = max(1, w*3/4), max(1, height*3/4)
+	}
+}
+
 func main() {
 	h := &history{}
 	_ = sdk.ServeWithHandlers(os.Stdin, os.Stdout, "tools.clipboard", sdk.Handlers{HostReady: func(host *sdk.HostClient) { h.host = host }, Initialize: func(p protocol.InitializeParams) error {
