@@ -132,6 +132,15 @@ def main():
         expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
         assert json.loads((source / "manifest.json").read_text(encoding="utf-8")) == expected, "OCR 清单已过期，请重新构建"
         assets.append(package(source, output, os, arch))
+    current_screenshot = json.loads((ROOT / "plugins/screenshot/manifest.json").read_text(encoding="utf-8"))
+    for os, arch in TARGETS:
+        source = ROOT / "bin/targets" / f"{os}-{arch}" / "screenshot"
+        if not source.exists():
+            continue
+        expected = json.loads(json.dumps(current_screenshot))
+        expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
+        assert json.loads((source / "manifest.json").read_text(encoding="utf-8")) == expected, "截图清单已过期，请重新构建"
+        assets.append(package(source, output, os, arch))
     (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n", encoding="utf-8")
     for asset in assets:
         print(asset["file"])

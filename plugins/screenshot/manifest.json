@@ -1,0 +1,118 @@
+{
+  "id": "tools.screenshot",
+  "name": "截图",
+  "version": "0.1.0",
+  "apiVersion": "1",
+  "icon": "icon.svg",
+  "runtime": {
+    "kind": "process",
+    "entry": "backend/plugin"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "capture",
+        "title": "截图",
+        "keywords": [
+          "截图",
+          "截屏",
+          "screenshot",
+          "区域截图"
+        ],
+        "uiView": "editor",
+        "startHidden": true,
+        "shortcut": "CmdOrCtrl+Shift+A"
+      },
+      {
+        "id": "open",
+        "title": "截图后处理",
+        "keywords": [
+          "截图后处理",
+          "截图标注",
+          "后处理",
+          "标注",
+          "screenshot editor"
+        ],
+        "uiView": "editor"
+      },
+      {
+        "id": "start",
+        "title": "start",
+        "searchOnly": true
+      },
+      {
+        "id": "poll",
+        "title": "poll",
+        "searchOnly": true
+      },
+      {
+        "id": "cancel",
+        "title": "cancel",
+        "searchOnly": true
+      },
+      {
+        "id": "read",
+        "title": "read",
+        "searchOnly": true
+      },
+      {
+        "id": "upload-start",
+        "title": "upload-start",
+        "searchOnly": true
+      },
+      {
+        "id": "upload",
+        "title": "upload",
+        "searchOnly": true
+      },
+      {
+        "id": "copy",
+        "title": "copy",
+        "searchOnly": true
+      },
+      {
+        "id": "save",
+        "title": "save",
+        "searchOnly": true
+      },
+      {
+        "id": "capture-region",
+        "title": "执行区域截图",
+        "searchOnly": true
+      }
+    ],
+    "uiViews": [
+      {
+        "id": "editor",
+        "entry": "index.html",
+        "bridgeVersion": "2",
+        "commands": [
+          "start",
+          "poll",
+          "cancel",
+          "read",
+          "upload-start",
+          "upload",
+          "copy",
+          "save",
+          "capture-region"
+        ],
+        "permissions": [
+          "window.execute",
+          "window.show",
+          "window.hide",
+          "file.savePNG",
+          "file.openImage",
+          "clipboard.read"
+        ]
+      }
+    ]
+  },
+  "permissions": [
+    "clipboard.write"
+  ],
+  "activationEvents": [
+    "onCommand:open",
+    "onCommand:capture"
+  ]
+}

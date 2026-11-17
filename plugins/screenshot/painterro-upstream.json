@@ -1,0 +1,29 @@
+{
+  "version": "1.2.92",
+  "source": "https://registry.npmjs.org/painterro/-/painterro-1.2.92.tgz",
+  "files": {
+    "LICENSE": "bd64b50d86231edaddcba895b404208c61bca072c95d36b5ad6a2f569871fc6e",
+    "css/bar-styles.css": "52aa5a1c6cebf45d5505b5ac02b9284ec75ec1858d23602b4077a6ec5935c6a0",
+    "css/checkers.svg": "6764a8de95d0a8347585c04c17856238aaaeb3706d45c588712252e10b4583bd",
+    "css/icons/ptroiconfont.svg": "6e7e592ecac4e4c1bae5fe10688b7a829f4838819de62d0c77a97dc6ddc75164",
+    "css/styles.css": "573d97601f349f7c3b3a8a7bd0d1c87e2f4babbea01b7219adbb5dbf91ec1919",
+    "js/colorPicker.js": "eb36b678915e834b5e7d67ec8b65661a65f529720891a850f4a5d5589a5997a6",
+    "js/controlbuilder.js": "97928d1d4438c31577af6753fbf73811658edf93757fc714ea9697f261619dcf",
+    "js/customEvents.js": "66354c59df0b496acd41910e2dcc75c7202563502b3ff6b02576cc3609925472",
+    "js/filters.js": "fca6bc08076ca0e4c2af8727fc3d22c2015be2285b21d98d0415464ad09992a9",
+    "js/inserter.js": "a7eb7065fe40154fc6a70644af38fc0ab41ad3ef5404d302a66594854a22f4d4",
+    "js/main.js": "c47aa9f5645d1d725dd43f7ca6e4cca9cfb8344e32d5017ca42c3506a14a4bbb",
+    "js/paintBucket.js": "97b7e755e27671cb43008b67ad840a820e22da9bcbe704b5855ec6a9380742cb",
+    "js/params.js": "dfd8c73af3de11700af8d24393696dbf3953e3c14dc00aba1fe076e1a1e4718d",
+    "js/primitive.js": "a9b4f5c93a6b00cd07a7d79f9f01f3bb5a64de11d0939d5699b49df3408ff30a",
+    "js/resizer.js": "548449f38ce00fc66485afe9c66c28f488313e046a7be9a52a3a03183594577e",
+    "js/selecter.js": "c33c58f4362350acedc13e0db532c4720e4f978c2e6c648ca9f4c7795cbd37bc",
+    "js/settings.js": "56de4bd012a8bf5dcb2cba06c70761f795e7d711872f605e2a17b8520c33bce7",
+    "js/text.js": "4f0f9e45a8b78e28babe87e774a13c931efa20622676400d6a46cdf9696b15bb",
+    "js/translation.js": "d1084b1d57da71f647ab5016ba1f21650b0e53da6cd5ddde5c7733ad75006c55",
+    "js/utils.js": "efcd781766bdf285b2a9250c7e903a433cfc4591a82ec322d2c3260c1c1e79b6",
+    "js/worklog.js": "a08ebe5f53be0bef9adce56597f0df229218813f03e8d7aa48f60fff7a69427c",
+    "js/zoomHelper.js": "1b4f42de4c6a99aa0ef7cbcdb9f8aa76c9699a9964d31e855d61306d22746138",
+    "langs/en.lang.js": "b9e7f88a98e110959b0fd619dad6bff135f3be0ce04cd77313c823d8a084d641"
+  }
+}

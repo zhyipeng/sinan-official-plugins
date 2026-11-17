@@ -9,6 +9,9 @@ const MaxMessageBytes = 1 << 20
 // Only clipboard host RPC may use this budget (8 MiB PNG encoded as base64).
 const MaxClipboardMessageBytes = 12 << 20
 const ClipboardCapability = "clipboard.v1"
+const WindowExecuteCapability = "ui.window-execute.v1"
+const ImageOutputCapability = "ui.image-output.v1"
+const ImageInputCapability = "ui.image-input.v1"
 
 // Image commands carry a host-validated, session-owned PNG (at most 4 MiB).
 const ImageCommandCapability = "ui.image-command.v1"
@@ -70,8 +73,9 @@ type CommandParams struct {
 }
 
 type CommandResult struct {
-	Text    string `json:"text"`
-	Dismiss bool   `json:"dismiss,omitempty"`
+	Text       string `json:"text"`
+	Dismiss    bool   `json:"dismiss,omitempty"`
+	KeepHidden bool   `json:"keepHidden,omitempty"`
 }
 
 type CancelParams struct {

@@ -122,3 +122,11 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 [文字识别 0.2.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.2.0) 已公开并登记 macOS、Windows、Linux 的 arm64/amd64 六目标原生包，最低宿主 [Sinan 0.3.1](https://github.com/zhyipeng/sinan/releases/tag/v0.3.1)。主输入框粘贴图片后打开匹配入口，会带入图片、显示原图并自动识别；插件内 Cmd/Ctrl+V 粘图识别，Cmd/Ctrl+C 复制可编辑结果。识别和模型均在本地，不需要 Python 或联网。
 
 [六目标原生验证](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44006353531) 已通过实际 ZIP 的中文/空格路径重定位、合成图每图两次及 worker 回收检查；Windows 包内附对应运行库，Linux 以 Ubuntu 24.04/glibc 2.39 和系统 libstdc++ 为基线。真实系统剪贴板与三端 WebView 未验收。来源与构建方法见[OCR 说明](plugins/ocr/README.md)。SDK 快照已归一到新增会话图片接口的本体提交，商店只登记真实发布资产。
+
+## 截图插件
+
+新增未发布 **截图**（`tools.screenshot` 0.1.0），提供区域截图、箭头/矩形/文字标注、撤销重做、复制与 PNG 保存。三端原生捕获适配、系统依赖、自动返回和验证边界见[截图说明](plugins/screenshot/README.md)。沿用现有协议、SDK 和权限格式；首版尚未接入 GNOME/KDE Wayland Portal。构建、测试、打包与三平台手动 CI 在既有功能之后追加，不自动安装或发布。
+
+截图双入口扩展：搜索“截图”或默认 Command/Ctrl+Shift+A 直接隐藏主窗口并选区，结束后自动进入标注；“截图后处理”仅打开编辑器。需要本轮支持 ui.window-execute.v1 的配套宿主，已发布 v0.3.1 不支持；SDK 来源补丁记录在 UPSTREAM.json。真实热键、授权与三端窗口焦点尚待验收，未发布或登记新资产。
+
+截图后处理已接入固定 Painterro 1.2.92：保留双入口、热键、复制保存及取消时不显示编辑器，新增组件的裁剪、像素化、画笔和缩放工具。采用私有源码适配和静态 CSS/DOM SVG/Canvas 文字，不放宽宿主 CSP；详情见[截图说明](plugins/screenshot/README.md)。本轮仅无界面验证与六目标构建/打包，尚未实机验收或发布。

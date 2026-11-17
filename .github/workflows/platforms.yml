@@ -43,6 +43,7 @@ jobs:
       - run: node scripts/build-calendar.mjs
       - run: node scripts/build-calculator.mjs --target=${{ matrix.os }}-arm64 --target=${{ matrix.os }}-amd64
       - run: node scripts/check-ocr-backend.mjs --target=${{ matrix.os }}-arm64 --target=${{ matrix.os }}-amd64
+      - run: node scripts/build-screenshot.mjs --target=${{ matrix.os }}-arm64 --target=${{ matrix.os }}-amd64
       - run: python scripts/package.py
       - uses: actions/upload-artifact@v4
         with:

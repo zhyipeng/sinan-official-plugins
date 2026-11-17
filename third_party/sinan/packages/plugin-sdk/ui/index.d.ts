@@ -1,5 +1,5 @@
 export function ready(): void;
-export function execute(commandId:string,input:string):Promise<{text:string;dismiss?:boolean}>;
+export function execute(commandId:string,input:string):Promise<{text:string;dismiss?:boolean;keepHidden?:boolean}>;
 export function readData<T=unknown>():Promise<{revision:number;value:T|null}>;
 export function writeData<T=unknown>(revision:number,value:T):Promise<{revision:number;value:T}>;
 export function readLaunch():Promise<{commandId?:string;input?:string;image?:{url:string;mimeType:string;width:number;height:number;bytes:number}}>;
@@ -20,4 +20,12 @@ export function writeClipboardText(text:string):Promise<null>;
 
 export interface UIImage {url:string;mimeType:string;width:number;height:number;bytes:number}
 export function readClipboardImage():Promise<UIImage|null>;
-export function executeImage(commandId:string,url:string):Promise<{text:string;dismiss?:boolean}>;
+export function executeImage(commandId:string,url:string):Promise<{text:string;dismiss?:boolean;keepHidden?:boolean}>;
+
+export function executeHidden(commandId:string,input?:string):Promise<{text:string;dismiss?:boolean;keepHidden?:boolean}>;
+
+export function showWindow(): Promise<null>;
+export function hideWindow(): Promise<null>;
+export function savePNG(commandId:string,input:string): Promise<{saved:boolean}>;
+
+export function openImage(): Promise<UIImage|null>;

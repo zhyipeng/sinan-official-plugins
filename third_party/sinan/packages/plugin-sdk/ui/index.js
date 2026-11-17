@@ -36,3 +36,12 @@ export function writeClipboardText(input) { return call({method:'clipboard.write
 // Snapshot the system clipboard into this view; does not transfer image bytes to JS.
 export function readClipboardImage() { return call({method:'clipboard.readImage'}); }
 export function executeImage(commandId,url) { return call({method:'command.executeImage',commandId,input:url}); }
+
+// Execute an allowed backend command while the owning window is hidden.
+export function executeHidden(commandId,input="") { return call({method:"window.execute",commandId,input}); }
+
+export function showWindow() { return call({method:"window.show"}); }
+export function hideWindow() { return call({method:"window.hide"}); }
+export function savePNG(commandId,input) { return call({method:"file.savePNG",commandId,input}); }
+
+export function openImage() { return call({method:"file.openImage"}); }
