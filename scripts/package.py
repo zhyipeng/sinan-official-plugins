@@ -28,6 +28,13 @@ def verify_native(data, os, arch, library=False):
         assert struct.unpack_from("<H", data, 16)[0] in ((3,) if library else (2, 3)), "ELF 文件类型不符"
 
 
+def verify_ocr_consoleless(data):
+    offset = struct.unpack_from("<I", data, 60)[0]
+    assert offset + 94 <= len(data), "OCR PE 可选头无效"
+    assert struct.unpack_from("<H", data, offset + 24)[0] == 0x20B, "OCR 需要 PE32+"
+    assert struct.unpack_from("<H", data, offset + 24 + 68)[0] == 2, "OCR 后台/worker 必须使用无控制台子系统"
+
+
 def package(source, output, os, arch):
     manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
     entry = manifest["runtime"].get("entry")
@@ -56,6 +63,8 @@ def package(source, output, os, arch):
                 )
                 if executable:
                     verify_native(payload, os, arch)
+                    if manifest["id"] == "tools.ocr" and os == "windows":
+                        verify_ocr_consoleless(payload)
                 elif library and manifest["id"] == "tools.ocr":
                     verify_native(payload, os, arch, library=True)
                 # Identical pure frontend packages have identical bytes on every OS.

@@ -72,8 +72,9 @@ if(plan.os==='windows'){
 const goEnv={...process.env,...plan.env};
 const cflags=[cgoArg('-I'+join(privateSource,'include').replaceAll('\\','/')),...plan.cflags].join(' ');
 const ldflags=[cgoArg('-L'+native.replaceAll('\\','/')),'-lppocr',...plan.ldflags].join(' ');
-run('go',['build','-trimpath','-ldflags=-s -w','-o',join(staging,'backend/plugin'+plan.suffix),'./backend'],{stdio:'inherit',env:{...goEnv,CGO_ENABLED:'0'}});
-const linker='-s -w'+(plan.extldflags?' -extldflags='+plan.extldflags:'');
+const baseLinker='-s -w'+(plan.os==='windows'?' -H=windowsgui':'');
+run('go',['build','-trimpath','-ldflags='+baseLinker,'-o',join(staging,'backend/plugin'+plan.suffix),'./backend'],{stdio:'inherit',env:{...goEnv,CGO_ENABLED:'0'}});
+const linker=baseLinker+(plan.extldflags?' -extldflags='+plan.extldflags:'');
 run('go',['build','-trimpath','-tags','ocr_native','-ldflags='+linker,'-o',join(staging,'backend/ocr-worker'+plan.suffix),'./worker'],{stdio:'inherit',env:{...goEnv,CGO_ENABLED:'1',CGO_CFLAGS:cflags,CGO_LDFLAGS:ldflags}});
 const probeEnv={PPOCR_BENCH_THREADS:'4'};
 for(const key of ['SYSTEMROOT','WINDIR','TEMP','TMP','TMPDIR'])if(process.env[key])probeEnv[key]=process.env[key];

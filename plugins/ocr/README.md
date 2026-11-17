@@ -87,3 +87,6 @@ npm run build:ocr -- --source=/绝对路径/RapidOCRLite --models=/绝对路径/
 
 
 跨 ISA 验证记录：终端样本在 ARM 基准中把 `go test ./...` 识别为 `go test /...`，x86 AVX2 路径识别为 `go test ./..`，均漏一个点。报告保留两种实际输出；以源文本编辑距离和字符差均不劣于既有基准、每图两次稳定为质量门槛，不强制复制某一架构的既有识别错误，也不将这种合成测试描述为完美准确率。Windows worker 使用 CREATE_NO_WINDOW 避免额外 conhost，回收检查允许最多 5 秒的系统进程枚举收敛，但不忽略残留进程。
+
+
+Windows 控制台补充：仅设置 HideWindow/CREATE_NO_WINDOW 仍可能为控制台子系统程序分配后台 conhost。OCR 后台和 worker 均以 `-H=windowsgui` 构建，不创建 GUI 窗口，仍通过显式继承的 stdio 管道通信；打包器校验两者为 PE32+ GUI 子系统。保留零残留子进程检查，不将 conhost 从断言中静默过滤。

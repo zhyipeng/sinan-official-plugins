@@ -88,3 +88,13 @@ class OCRLibraryTest(unittest.TestCase):
                 packaging.verify_native(data,os,"amd64" if arch=="arm64" else "arm64",library=True)
             with self.assertRaises(AssertionError):
                 packaging.verify_native(executable(os,arch),os,arch,library=True)
+
+
+class OCRConsoleTest(unittest.TestCase):
+    def test_consoleless_pe_subsystem_is_required(self):
+        data=bytearray(executable("windows","amd64"));data.extend(bytes(128))
+        struct.pack_into("<H",data,64+24,0x20B)
+        struct.pack_into("<H",data,64+24+68,2)
+        packaging.verify_ocr_consoleless(data)
+        struct.pack_into("<H",data,64+24+68,3)
+        with self.assertRaises(AssertionError):packaging.verify_ocr_consoleless(data)
