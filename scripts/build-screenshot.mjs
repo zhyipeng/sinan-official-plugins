@@ -28,9 +28,9 @@ for(const target of selected){
   const helper=join(out,'backend','capture-macos');
   const native=spawnSync('xcrun',['--sdk','macosx','clang','-arch',arch==='amd64'?'x86_64':arch,
    '-mmacosx-version-min=12.0','-fobjc-arc','-O2','-Wall','-Wextra','-Werror',
-   '-framework','AppKit','-framework','CoreText','-framework','ImageIO','-framework','UniformTypeIdentifiers',
+   '-framework','AppKit','-framework','ApplicationServices','-framework','CoreText','-framework','ImageIO','-framework','UniformTypeIdentifiers',
    '-weak_framework','ScreenCaptureKit',join(source,'native','capture-macos.m'),join(source,'native','selection-view.m'),
-   join(source,'native','overlay-annotations.m'),'-o',helper],
+   join(source,'native','overlay-annotations.m'),join(source,'native','snap-targets.m'),'-o',helper],
    {stdio:'inherit'});
   if(native.error)throw native.error;if(native.status!==0)process.exit(native.status||1);
   const signing=spawnSync('codesign',['--force','--sign','-','--identifier','com.sinan.screenshot.capture',helper],{stdio:'inherit'});

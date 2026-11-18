@@ -1,4 +1,5 @@
 #import "../overlay-annotations.h"
+#import "../snap-targets.h"
 #import <ImageIO/ImageIO.h>
 #include <assert.h>
 
@@ -36,8 +37,30 @@ static BOOL matchesRGB(const unsigned char *pixels, size_t x, size_t y, uint32_t
            color[2] == (rgb & 0xff) && color[3] == 255;
 }
 
+static void testSnapGeometry(void) {
+    CaptureSnapWindow *front = [[CaptureSnapWindow alloc] initWithPID:1 frame:CGRectMake(-100, 70, 240, 160)];
+    CaptureSnapWindow *back = [[CaptureSnapWindow alloc] initWithPID:2 frame:CGRectMake(-200, 20, 500, 310)];
+    NSArray *windows = @[front, back];
+    assert(captureSnapWindowAtPoint(windows, CGPointMake(-20, 90)) == front);
+    assert(captureSnapWindowAtPoint(windows, CGPointMake(154, 90)) == back);
+    assert(captureSnapWindowAtPoint(windows, CGPointMake(-300, 90)) == nil);
+
+    CGRect leftDisplay = CGRectMake(-1920, -240, 1920, 1080);
+    CGRect mainDisplay = CGRectMake(0, 0, 1440, 900);
+    NSRect left = localSnapRect(front.frame, leftDisplay, NSMakeSize(1920, 1080));
+    assert(NSEqualRects(left, NSMakeRect(1820, 310, 100, 160)));
+    NSRect right = localSnapRect(front.frame, mainDisplay, NSMakeSize(1440, 900));
+    assert(NSEqualRects(right, NSMakeRect(0, 70, 140, 160)));
+
+    NSRect scaled = localSnapRect(CGRectMake(144, 162, 100, 50), mainDisplay, NSMakeSize(720, 450));
+    assert(NSEqualRects(scaled, NSMakeRect(72, 81, 50, 25)));
+    assert(NSIsEmptyRect(localSnapRect(CGRectMake(-2010, -26, 70, 36), leftDisplay, NSMakeSize(1920, 1080))));
+    assert(NSIsEmptyRect(localSnapRect(CGRectInfinite, CGRectZero, NSMakeSize(1920, 1080))));
+}
+
 int main(void) {
     @autoreleasepool {
+        testSnapGeometry();
         CGColorSpaceRef color = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
         CGContextRef background = CGBitmapContextCreate(NULL, 200, 160, 8, 0, color, rgba);
         CGContextSetRGBFillColor(background, 0, 0.6, 0.2, 1);

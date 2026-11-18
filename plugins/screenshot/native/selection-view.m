@@ -48,8 +48,30 @@ static NSImage *colorSwatch(uint32_t rgb) {
     }];
 }
 
+static dispatch_queue_t elementLookupQueue(void) {
+    static dispatch_queue_t queue;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        queue = dispatch_queue_create("com.sinan.screenshot.element-hit-test", DISPATCH_QUEUE_SERIAL);
+    });
+    return queue;
+}
+
 @implementation SelectionView {
     CGImageRef _desktop;
+    CaptureSnapTargets *_snapTargets;
+    CGRect _displayFrame;
+    NSTrackingArea *_snapTracking;
+    CaptureSnapWindow *_hoverWindow;
+    NSRect _hoverBounds;
+    NSRect _pendingSnap;
+    CGPoint _lookupPoint;
+    NSTimer *_lookupTimer;
+    BOOL _lookupRunning;
+    NSUInteger _lookupRevision;
+    NSArray<NSValue *> *_elementCandidates;
+    NSUInteger _candidateIndex;
+    CGFloat _scrollDistance;
     NSImage *_background;
     CGImageRef _mosaic;
     NSMutableArray<CaptureAnnotation *> *_marks;
@@ -86,11 +108,17 @@ static NSImage *colorSwatch(uint32_t rgb) {
 - (instancetype)initWithFrame:(NSRect)frame
                         image:(CGImageRef)image
                      allowOCR:(BOOL)allowOCR
+                  snapTargets:(CaptureSnapTargets *)snapTargets
+                 displayFrame:(CGRect)displayFrame
                         begin:(void (^)(SelectionView *))begin
                        output:(CaptureOutput)output {
     self = [super initWithFrame:frame];
     if (self) {
         _desktop = CGImageRetain(image);
+        _snapTargets = snapTargets;
+        _displayFrame = displayFrame;
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(snapTargetsChanged:)
+                                                   name:CaptureSnapTargetsDidChange object:snapTargets];
         _background = [[NSImage alloc] initWithCGImage:image size:frame.size];
         _pixels = CGSizeMake(CGImageGetWidth(image), CGImageGetHeight(image));
         _begin = [begin copy];
@@ -105,6 +133,8 @@ static NSImage *colorSwatch(uint32_t rgb) {
 }
 
 - (void)dealloc {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    [_lookupTimer invalidate];
     if (_desktop != NULL) {
         CGImageRelease(_desktop);
     }
@@ -479,8 +509,171 @@ static NSImage *colorSwatch(uint32_t rgb) {
     return rect.size.width >= 2 && rect.size.height >= 2 ? rect : CGRectNull;
 }
 
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (_snapTracking != nil) {
+        [self removeTrackingArea:_snapTracking];
+    }
+    _snapTracking = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+        options:NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways |
+                NSTrackingInVisibleRect owner:self userInfo:nil];
+    [self addTrackingArea:_snapTracking];
+}
+
+- (BOOL)canPreviewSnap {
+    return !_dragging && NSIsEmptyRect(_selection) && self.window != nil;
+}
+
+- (void)clearHover {
+    [_lookupTimer invalidate];
+    _lookupTimer = nil;
+    _lookupRevision++;
+    _hoverWindow = nil;
+    _elementCandidates = nil;
+    _candidateIndex = 0;
+    _scrollDistance = 0;
+    if (!NSIsEmptyRect(_hoverBounds)) {
+        _hoverBounds = NSZeroRect;
+        self.needsDisplay = YES;
+    }
+}
+
+- (void)updateHoverBounds {
+    NSRect bounds = NSZeroRect;
+    if (_elementCandidates.count > 0) {
+        bounds = [_elementCandidates[_candidateIndex] rectValue];
+    } else if (_hoverWindow != nil) {
+        bounds = localSnapRect(_hoverWindow.frame, _displayFrame, self.bounds.size);
+    }
+    if (!NSEqualRects(bounds, _hoverBounds)) {
+        _hoverBounds = bounds;
+        self.needsDisplay = YES;
+    }
+}
+
+- (void)scheduleElementLookup {
+    if (_lookupRunning || _lookupTimer != nil || _hoverWindow == nil ||
+        !_snapTargets.elementMode || !_snapTargets.accessibilityTrusted || ![self canPreviewSnap]) {
+        return;
+    }
+    __weak SelectionView *weakSelf = self;
+    _lookupTimer = [NSTimer scheduledTimerWithTimeInterval:0.045 repeats:NO block:^(__unused NSTimer *timer) {
+        [weakSelf lookupElement];
+    }];
+}
+
+- (void)lookupElement {
+    _lookupTimer = nil;
+    CaptureSnapWindow *window = _hoverWindow;
+    CGPoint point = _lookupPoint;
+    NSUInteger revision = _lookupRevision;
+    _lookupRunning = YES;
+    __weak SelectionView *weakSelf = self;
+    dispatch_async(elementLookupQueue(), ^{
+        NSArray<NSValue *> *rects = captureElementRects(window, point);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [weakSelf completeElementLookup:rects revision:revision];
+        });
+    });
+}
+
+- (void)completeElementLookup:(NSArray<NSValue *> *)rects revision:(NSUInteger)revision {
+    _lookupRunning = NO;
+    if (revision != _lookupRevision) {
+        [self scheduleElementLookup];
+        return;
+    }
+
+    NSMutableArray<NSValue *> *local = [NSMutableArray array];
+    NSRect windowRect = localSnapRect(_hoverWindow.frame, _displayFrame, self.bounds.size);
+    for (NSValue *rect in rects) {
+        NSRect candidate = localSnapRect(rect.rectValue, _displayFrame, self.bounds.size);
+        if (!NSIsEmptyRect(candidate) && !NSEqualRects(candidate, windowRect)) {
+            NSValue *value = [NSValue valueWithRect:candidate];
+            if (![local containsObject:value]) {
+                [local addObject:value];
+            }
+        }
+    }
+    if (local.count > 0 && !NSIsEmptyRect(windowRect)) {
+        [local addObject:[NSValue valueWithRect:windowRect]];
+    }
+    _elementCandidates = local;
+    _candidateIndex = 0;
+    _scrollDistance = 0;
+    [self updateHoverBounds];
+}
+
+- (void)refreshHoverAtPoint:(NSPoint)point {
+    if (![self canPreviewSnap] || !NSPointInRect(point, self.bounds)) {
+        [self clearHover];
+        return;
+    }
+    CGPoint screenPoint = CGPointMake(_displayFrame.origin.x + point.x * _displayFrame.size.width / NSWidth(self.bounds),
+                                      _displayFrame.origin.y + point.y * _displayFrame.size.height / NSHeight(self.bounds));
+    CaptureSnapWindow *window = captureSnapWindowAtPoint(_snapTargets.windows, screenPoint);
+    if (window == nil) {
+        [self clearHover];
+        return;
+    }
+    if (_hoverWindow == window && hypot(screenPoint.x - _lookupPoint.x, screenPoint.y - _lookupPoint.y) < 3) {
+        return;
+    }
+    BOOL keepCandidate = _hoverWindow == window && NSPointInRect(point, _hoverBounds);
+    _hoverWindow = window;
+    _lookupPoint = screenPoint;
+    _lookupRevision++;
+    [_lookupTimer invalidate];
+    _lookupTimer = nil;
+    if (!keepCandidate) {
+        _elementCandidates = nil;
+        _candidateIndex = 0;
+        _scrollDistance = 0;
+    }
+    [self updateHoverBounds];
+    [self scheduleElementLookup];
+}
+
+- (void)refreshHoverAtPointer {
+    if (self.window != nil) {
+        [self refreshHoverAtPoint:[self convertPoint:self.window.mouseLocationOutsideOfEventStream fromView:nil]];
+    }
+}
+
+- (void)snapTargetsChanged:(__unused NSNotification *)notification {
+    [self clearHover];
+    [self refreshHoverAtPointer];
+    self.needsDisplay = YES;
+}
+
+- (void)mouseEntered:(NSEvent *)event { [self mouseMoved:event]; }
+- (void)mouseExited:(__unused NSEvent *)event { [self clearHover]; }
+
+- (void)mouseMoved:(NSEvent *)event {
+    [self refreshHoverAtPoint:[self convertPoint:event.locationInWindow fromView:nil]];
+}
+
+- (void)scrollWheel:(NSEvent *)event {
+    NSUInteger count = _elementCandidates.count;
+    if (count < 2 || ![self canPreviewSnap] || event.momentumPhase != NSEventPhaseNone) {
+        return;
+    }
+    _scrollDistance += event.scrollingDeltaY;
+    CGFloat threshold = event.hasPreciseScrollingDeltas ? 15 : 1;
+    if (fabs(_scrollDistance) >= threshold) {
+        _candidateIndex = (_candidateIndex + (_scrollDistance > 0 ? 1 : count - 1)) % count;
+        _scrollDistance = 0;
+        [self updateHoverBounds];
+    }
+}
+
 - (void)drawHint {
-    NSString *text = @"拖动框选  ·  Esc 取消";
+    NSString *text = @"窗口吸附  ·  单击选取或拖动框选  ·  Tab 切换";
+    if (_snapTargets.elementMode) {
+        text = _snapTargets.accessibilityTrusted
+            ? @"元素吸附  ·  滚轮切换候选  ·  Tab 切回窗口"
+            : @"元素吸附需辅助功能授权，当前使用窗口吸附";
+    }
     NSDictionary *attributes = @{
         NSFontAttributeName: [NSFont systemFontOfSize:13 weight:NSFontWeightMedium],
         NSForegroundColorAttributeName: NSColor.whiteColor,
@@ -497,9 +690,11 @@ static NSImage *colorSwatch(uint32_t rgb) {
     [_background drawInRect:self.bounds fromRect:NSZeroRect operation:NSCompositingOperationCopy
                    fraction:1 respectFlipped:YES hints:nil];
 
+    NSRect preview = NSIsEmptyRect(_pendingSnap) ? _hoverBounds : _pendingSnap;
+    NSRect bright = NSIsEmptyRect(_selection) ? preview : _selection;
     NSBezierPath *shade = [NSBezierPath bezierPathWithRect:self.bounds];
-    if (!NSIsEmptyRect(_selection)) {
-        [shade appendBezierPathWithRect:_selection];
+    if (!NSIsEmptyRect(bright)) {
+        [shade appendBezierPathWithRect:bright];
     }
     shade.windingRule = NSWindingRuleEvenOdd;
     [[NSColor colorWithWhite:0 alpha:0.42] setFill];
@@ -507,6 +702,10 @@ static NSImage *colorSwatch(uint32_t rgb) {
 
     CGRect pixels = [self selectionInPixels];
     if (CGRectIsNull(pixels)) {
+        if (!NSIsEmptyRect(preview)) {
+            [[NSColor colorWithSRGBRed:0.19 green:0.37 blue:0.85 alpha:1] setStroke];
+            [NSBezierPath strokeRect:NSInsetRect(preview, 0.5, 0.5)];
+        }
         [self drawHint];
         return;
     }
@@ -584,6 +783,7 @@ static NSImage *colorSwatch(uint32_t rgb) {
         return;
     }
     _selection = NSZeroRect;
+    _pendingSnap = NSZeroRect;
     _dragging = NO;
     _draft = nil;
     [_marks removeAllObjects];
@@ -605,6 +805,10 @@ static NSImage *colorSwatch(uint32_t rgb) {
     [self commitText];
     [self.window makeFirstResponder:self];
     NSPoint point = [self pointForEvent:event];
+    if (NSIsEmptyRect(_selection) && NSPointInRect(point, _hoverBounds)) {
+        _pendingSnap = _hoverBounds;
+    }
+    [self clearHover];
     if (NSPointInRect(point, _selection) && _tool != AnnotationSelect) {
         if (_tool == AnnotationText) {
             [self beginTextAt:point];
@@ -685,7 +889,14 @@ static NSImage *colorSwatch(uint32_t rgb) {
     if (!_dragging) {
         return;
     }
-    NSPoint point = [self pointForEvent:event];
+    NSPoint rawPoint = [self convertPoint:event.locationInWindow fromView:nil];
+    if (!NSIsEmptyRect(_pendingSnap)) {
+        if (hypot(rawPoint.x - _anchor.x, rawPoint.y - _anchor.y) < 4) {
+            return;
+        }
+        _pendingSnap = NSZeroRect;
+    }
+    NSPoint point = clampPoint(rawPoint, self.bounds);
     CGFloat dx = point.x - _anchor.x;
     CGFloat dy = point.y - _anchor.y;
     if (_moving) {
@@ -722,8 +933,14 @@ static NSImage *colorSwatch(uint32_t rgb) {
         self.needsDisplay = YES;
     }
     _dragging = NO;
+    if (!NSIsEmptyRect(_pendingSnap)) {
+        _selection = _pendingSnap;
+        _pendingSnap = NSZeroRect;
+        self.needsDisplay = YES;
+    }
     if (CGRectIsNull([self selectionInPixels])) {
         [self clearSelection];
+        [self refreshHoverAtPointer];
     }
     [self updateToolbar];
 }
@@ -764,6 +981,10 @@ static NSImage *colorSwatch(uint32_t rgb) {
         return;
     }
     if (_dragging || _movingMark || _draft != nil) {
+        return;
+    }
+    if (key == NSTabCharacter && NSIsEmptyRect(_selection)) {
+        [_snapTargets toggleElementMode];
         return;
     }
     if (key == NSCarriageReturnCharacter || key == NSEnterCharacter) {

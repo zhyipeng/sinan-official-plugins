@@ -90,6 +90,12 @@ static void showSelection(NSDictionary<NSNumber *, DisplaySnapshot *> *snapshots
         exit(CaptureCancelled);
     }
 
+    CaptureSnapTargets *snapTargets = [CaptureSnapTargets new];
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSArray<CaptureSnapWindow *> *windows = captureOnscreenWindows();
+        dispatch_async(dispatch_get_main_queue(), ^{ snapTargets.windows = windows; });
+    });
+
     NSMutableArray<CapturePanel *> *panels = [NSMutableArray arrayWithCapacity:screens.count];
     __weak NSArray<CapturePanel *> *weakPanels = panels;
     __block BOOL saving = NO;
@@ -111,8 +117,10 @@ static void showSelection(NSDictionary<NSNumber *, DisplaySnapshot *> *snapshots
         panel.animationBehavior = NSWindowAnimationBehaviorNone;
         panel.hidesOnDeactivate = NO;
         panel.becomesKeyOnlyIfNeeded = NO;
+        panel.acceptsMouseMovedEvents = YES;
         panel.contentView = [[SelectionView alloc] initWithFrame:(NSRect){NSZeroPoint, frame.size}
-            image:snapshot.image allowOCR:allowOCR begin:^(SelectionView *active) {
+            image:snapshot.image allowOCR:allowOCR snapTargets:snapTargets
+            displayFrame:CGDisplayBounds(snapshot.displayID) begin:^(SelectionView *active) {
                 [active.window makeKeyWindow];
                 for (CapturePanel *other in weakPanels) {
                     SelectionView *view = (SelectionView *)other.contentView;

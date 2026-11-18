@@ -23,8 +23,8 @@ if(process.platform==='darwin'){
  const executable=join(dir,'annotations');
  try{
   run('xcrun',['--sdk','macosx','clang','-fobjc-arc','-Wall','-Wextra','-Werror',
-   '-framework','AppKit','-framework','CoreText','-framework','ImageIO','-framework','UniformTypeIdentifiers',
-   join(native,'tests','annotations.m'),join(native,'overlay-annotations.m'),'-o',executable]);
+   '-framework','AppKit','-framework','ApplicationServices','-framework','CoreText','-framework','ImageIO','-framework','UniformTypeIdentifiers',
+   join(native,'tests','annotations.m'),join(native,'overlay-annotations.m'),join(native,'snap-targets.m'),'-o',executable]);
   run(executable,[]);
  }finally{rmSync(dir,{recursive:true,force:true});}
 }
