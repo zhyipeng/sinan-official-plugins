@@ -157,6 +157,11 @@ def main():
         expected["runtime"]["entry"] = "backend/plugin" + (".exe" if os == "windows" else "")
         assert json.loads((source / "manifest.json").read_text(encoding="utf-8")) == expected, f"{os}-{arch} 脚本清单已过期，请重新构建"
         assets.append(package(source, output, os, arch))
+    encoding_source = ROOT / "bin/plugins/encoding-assistant"
+    current_encoding = json.loads((ROOT / "plugins/encoding-assistant/manifest.json").read_text(encoding="utf-8"))
+    assert json.loads((encoding_source / "manifest.json").read_text(encoding="utf-8")) == current_encoding, "编码助手清单已过期，请重新构建"
+    for os, arch in TARGETS:
+        assets.append(package(encoding_source, output, os, arch))
     (output / "assets.json").write_text(json.dumps(assets, indent=2) + "\n", encoding="utf-8")
     for asset in assets:
         print(asset["file"])

@@ -1,0 +1,51 @@
+:root {
+  color-scheme: light dark;
+  --ink: var(--sinan-text, #202d3d);
+  --muted: var(--sinan-muted, #536378);
+  --paper: var(--sinan-background, #fff);
+  --line: var(--sinan-line, #d5deea);
+  --panel: var(--sinan-surface, #f4f7fb);
+  --blue: #315ed8;
+  --error: #aa3027;
+  color: var(--ink);
+  background: var(--paper);
+  font: 13px/1.5 system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: var(--sinan-text, #e4eaf1);
+    --muted: var(--sinan-muted, #aebdcd);
+    --paper: var(--sinan-background, #1c242f);
+    --line: var(--sinan-line, #495768);
+    --panel: var(--sinan-surface, #283342);
+    --error: #f9a8a1;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 760px; margin: auto; padding: 14px 16px 20px; }
+header, .controls, .result { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+header { justify-content: space-between; margin-bottom: 12px; }
+h1 { margin: 0; font-size: 19px; font-weight: 650; }
+#status { margin: 0 0 8px; color: var(--muted); overflow-wrap: anywhere; }
+#status:empty { margin: 0; }
+#status.error { color: var(--error); }
+button, select, input, textarea {
+  color: inherit; background: var(--paper); font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px;
+}
+button { cursor: pointer; white-space: nowrap; }
+button:hover:not(:disabled) { background: var(--panel); }
+button:disabled { cursor: default; opacity: .55; }
+button.primary, button.primary:hover:not(:disabled) { color: white; background: var(--blue); border-color: var(--blue); }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+input { flex: 1 1 176px; min-width: 0; }
+textarea { display: block; width: 100%; min-height: 100px; resize: vertical; margin-bottom: 8px; }
+.results { margin: 10px 0; }
+.result { flex-wrap: nowrap; background: var(--panel); border-radius: 6px; padding: 7px 9px; margin-bottom: 5px; }
+.result-content { min-width: 0; flex: 1; }
+.caption { color: var(--muted); }
+code { display: block; font: 13px/1.45 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+code:empty { display: none; }
+.preview { display: block; width: auto; max-width: 100%; max-height: 184px; margin-bottom: 8px; }
+.qr { display: block; max-width: 100%; height: auto; image-rendering: pixelated; }
+[hidden] { display: none !important; }

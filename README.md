@@ -148,3 +148,7 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 独立官方插件「脚本」支持解释器自动发现和手动配置、多个脚本目录、全局关键字搜索、脚本导入、创建和运行。每个脚本可配置全局搜索显示和运行输出页，默认后台运行并发送结果通知。最低宿主版本为 Sinan 0.6.0。发行流程构建 macOS、Windows、Linux 的 arm64/amd64 六个目标。功能和各平台的解释器要求见[脚本插件说明](plugins/script/README.md)。
 
 [脚本 0.2.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.script-v0.2.0) 已发布。[发行流水线](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44277506650) 通过无界面测试、六目标交叉构建和打包。六个公开 ZIP 已下载核对大小、SHA-256、清单、图标与原生架构。系统通知和输出页的真实桌面交互仍待三平台实机验收。
+
+## 编码助手
+
+[编码助手](plugins/encoding-assistant/README.md) 提供时间转换、Base64、UUID、Hash 和二维码五个搜索入口；时间、网址和图片也可通过内容触发。所有转换均离线进行。运行 `npm run build:encoding-assistant` 可构建本地安装目录；已纳入标准打包和平台检查，尚未发布。

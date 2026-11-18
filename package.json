@@ -3,21 +3,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs && node scripts/build-clipboard.mjs && node scripts/build-translate.mjs && node scripts/build-calendar.mjs && node scripts/build-calculator.mjs && node scripts/build-screenshot.mjs && node scripts/build-script.mjs",
+    "build": "node scripts/build.mjs && node scripts/build-clipboard.mjs && node scripts/build-translate.mjs && node scripts/build-calendar.mjs && node scripts/build-calculator.mjs && node scripts/build-screenshot.mjs && node scripts/build-script.mjs && node scripts/build-encoding-assistant.mjs",
     "test": "node scripts/test.mjs",
-    "build:all": "node scripts/build.mjs && node scripts/build-clipboard.mjs --all && node scripts/build-translate.mjs --all && node scripts/build-calendar.mjs && node scripts/build-calculator.mjs --all && node scripts/build-screenshot.mjs --all && node scripts/build-script.mjs --all",
+    "build:all": "node scripts/build.mjs && node scripts/build-clipboard.mjs --all && node scripts/build-translate.mjs --all && node scripts/build-calendar.mjs && node scripts/build-calculator.mjs --all && node scripts/build-screenshot.mjs --all && node scripts/build-script.mjs --all && node scripts/build-encoding-assistant.mjs",
     "package": "npm run build && node scripts/package.mjs",
     "package:all": "npm run build:all && node scripts/package.mjs",
     "release:tag": "node scripts/release-tag.mjs",
     "build:ocr": "node scripts/build-ocr.mjs",
     "build:screenshot": "node scripts/build-screenshot.mjs",
-    "build:script": "node scripts/build-script.mjs"
+    "build:script": "node scripts/build-script.mjs",
+    "build:encoding-assistant": "node scripts/build-encoding-assistant.mjs"
   },
   "dependencies": {
     "@daypicker/react": "10.0.2",
+    "@noble/hashes": "2.0.1",
     "acorn": "8.19.0",
     "chinese-days": "1.5.10",
+    "jsqr": "1.4.0",
     "lossless-json": "4.3.3",
+    "qrcode-generator": "2.0.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "vanilla-jsoneditor": "3.13.0"
