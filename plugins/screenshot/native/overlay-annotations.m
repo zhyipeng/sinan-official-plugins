@@ -3,26 +3,32 @@
 #import <ImageIO/ImageIO.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
-static CTLineRef createTextLine(NSString *text, CTFontRef font) CF_RETURNS_RETAINED {
+const uint32_t CaptureDefaultAnnotationRGB = 0xE82B33;
 
-    CGColorRef red = CGColorCreateGenericRGB(0.91, 0.17, 0.2, 1);
-    CGColorRef white = CGColorCreateGenericRGB(1, 1, 1, 1);
+NSColor *captureAnnotationColor(uint32_t rgb) {
+    return [NSColor colorWithSRGBRed:((rgb >> 16) & 0xff) / 255.0
+                              green:((rgb >> 8) & 0xff) / 255.0
+                               blue:(rgb & 0xff) / 255.0 alpha:1];
+}
+
+static CTLineRef createTextLine(NSString *text, CTFontRef font, uint32_t rgb) CF_RETURNS_RETAINED {
+    NSColor *fill = captureAnnotationColor(rgb);
+    CGFloat brightness = fill.redComponent * 0.2126 + fill.greenComponent * 0.7152 + fill.blueComponent * 0.0722;
+    NSColor *outline = brightness > 0.72 ? NSColor.blackColor : NSColor.whiteColor;
     NSDictionary *attributes = @{
         (__bridge NSString *)kCTFontAttributeName: (__bridge id)font,
-        (__bridge NSString *)kCTForegroundColorAttributeName: (__bridge id)red,
-        (__bridge NSString *)kCTStrokeColorAttributeName: (__bridge id)white,
+        (__bridge NSString *)kCTForegroundColorAttributeName: (__bridge id)fill.CGColor,
+        (__bridge NSString *)kCTStrokeColorAttributeName: (__bridge id)outline.CGColor,
         (__bridge NSString *)kCTStrokeWidthAttributeName: @(-2.0),
     };
     NSAttributedString *run = [[NSAttributedString alloc] initWithString:text attributes:attributes];
     CTLineRef line = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)run);
-    CGColorRelease(white);
-    CGColorRelease(red);
     return line;
 }
 
-static void drawText(CGContextRef context, NSString *text, NSPoint origin) {
+static void drawText(CGContextRef context, NSString *text, NSPoint origin, uint32_t rgb) {
     CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontUIFontEmphasizedSystem, 20, NULL);
-    CTLineRef line = createTextLine(text, font);
+    CTLineRef line = createTextLine(text, font, rgb);
     CGContextSaveGState(context);
     CGContextTranslateCTM(context, origin.x, origin.y + CTFontGetAscent(font));
     CGContextScaleCTM(context, 1, -1);
@@ -36,10 +42,18 @@ static void drawText(CGContextRef context, NSString *text, NSPoint origin) {
 
 @implementation CaptureAnnotation
 
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _rgb = CaptureDefaultAnnotationRGB;
+    }
+    return self;
+}
+
 - (NSRect)bounds {
     if (self.tool == AnnotationText && self.text.length > 0) {
         CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontUIFontEmphasizedSystem, 20, NULL);
-        CTLineRef line = createTextLine(self.text, font);
+        CTLineRef line = createTextLine(self.text, font, self.rgb);
         CGFloat ascent, descent, leading;
         CGFloat width = CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
         CFRelease(line);
@@ -90,7 +104,7 @@ static void drawText(CGContextRef context, NSString *text, NSPoint origin) {
         return;
     }
     if (self.tool == AnnotationText) {
-        drawText(context, self.text, self.start);
+        drawText(context, self.text, self.start, self.rgb);
         return;
     }
     if (self.tool == AnnotationMosaic) {
@@ -109,7 +123,7 @@ static void drawText(CGContextRef context, NSString *text, NSPoint origin) {
     CGContextSetLineWidth(context, 3);
     CGContextSetLineCap(context, kCGLineCapRound);
     CGContextSetLineJoin(context, kCGLineJoinRound);
-    CGContextSetRGBStrokeColor(context, 0.91, 0.17, 0.2, 1);
+    CGContextSetStrokeColorWithColor(context, captureAnnotationColor(self.rgb).CGColor);
     if (self.tool == AnnotationRectangle) {
         CGContextStrokeRect(context, self.bounds);
     } else {

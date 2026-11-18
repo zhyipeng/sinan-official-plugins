@@ -35,6 +35,19 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
     EdgeBottom = 1 << 3,
 };
 
+static NSImage *colorSwatch(uint32_t rgb) {
+    NSColor *fill = captureAnnotationColor(rgb);
+    return [NSImage imageWithSize:NSMakeSize(16, 16) flipped:NO drawingHandler:^BOOL(NSRect rect) {
+        NSBezierPath *swatch = [NSBezierPath bezierPathWithRoundedRect:NSInsetRect(rect, 0.5, 0.5)
+                                                            xRadius:4 yRadius:4];
+        [fill setFill];
+        [swatch fill];
+        [NSColor.separatorColor setStroke];
+        [swatch stroke];
+        return YES;
+    }];
+}
+
 @implementation SelectionView {
     CGImageRef _desktop;
     NSImage *_background;
@@ -48,6 +61,11 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
     CaptureAnnotation *_draft;
     AnnotationTool _tool;
     NSStackView *_toolbar;
+    NSButton *_colorButton;
+    NSStackView *_palette;
+    NSTextField *_hexField;
+    uint32_t _annotationRGB;
+    uint32_t _displayedRGB;
     BOOL _allowOCR;
     NSArray<NSButton *> *_tools;
     NSButton *_undo;
@@ -80,6 +98,8 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
         _marks = [NSMutableArray array];
         _undoActions = [NSMutableArray array];
         _allowOCR = allowOCR;
+        _annotationRGB = CaptureDefaultAnnotationRGB;
+        _displayedRGB = UINT32_MAX;
     }
     return self;
 }
@@ -140,7 +160,8 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
                                 action:@selector(outputFromButton:) tag:DestinationOCR];
     ocr.enabled = allowOCR;
     ocr.toolTip = allowOCR ? @"OCR 识别选区" : @"安装并启用 OCR 插件后可用";
-    _toolbar = [NSStackView stackViewWithViews:[_tools arrayByAddingObjectsFromArray:@[_undo, copy, save, ocr]]];
+    _colorButton = [self symbolButton:@"circle" label:@"标注颜色" action:@selector(togglePalette:) tag:0];
+    _toolbar = [NSStackView stackViewWithViews:[_tools arrayByAddingObjectsFromArray:@[_colorButton, _undo, copy, save, ocr]]];
     _toolbar.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     _toolbar.spacing = 2;
     _toolbar.edgeInsets = NSEdgeInsetsMake(4, 6, 4, 6);
@@ -161,6 +182,113 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
     [self addSubview:_feedback];
 }
 
+- (uint32_t)visibleAnnotationRGB {
+    if (_selectedMark != nil && _selectedMark.tool != AnnotationMosaic) {
+        return _selectedMark.rgb;
+    }
+    return _annotationRGB;
+}
+
+- (void)updateColorButton {
+    uint32_t rgb = [self visibleAnnotationRGB];
+    if (_colorButton == nil || rgb == _displayedRGB) {
+        return;
+    }
+    _displayedRGB = rgb;
+    _colorButton.image = colorSwatch(rgb);
+    _colorButton.toolTip = [NSString stringWithFormat:@"标注颜色 #%06X", rgb];
+    _colorButton.accessibilityValue = [NSString stringWithFormat:@"#%06X", rgb];
+}
+
+- (void)setupPalette {
+    NSArray<NSNumber *> *colors = @[@(CaptureDefaultAnnotationRGB), @0xFF8A22, @0xF4CB35,
+                                    @0x21A160, @0x315ED8, @0x8E58D3, @0x20232A, @0xFFFFFF];
+    NSArray<NSString *> *names = @[@"红色", @"橙色", @"黄色", @"绿色", @"蓝色", @"紫色", @"黑色", @"白色"];
+    NSMutableArray<NSView *> *items = [NSMutableArray array];
+    for (NSUInteger i = 0; i < colors.count; i++) {
+        NSButton *swatch = [NSButton buttonWithImage:colorSwatch(colors[i].unsignedIntValue)
+                                             target:self action:@selector(chooseColor:)];
+        swatch.tag = colors[i].unsignedIntValue;
+        swatch.bezelStyle = NSBezelStyleRecessed;
+        swatch.toolTip = names[i];
+        swatch.accessibilityLabel = names[i];
+        swatch.translatesAutoresizingMaskIntoConstraints = NO;
+        [swatch.widthAnchor constraintEqualToConstant:25].active = YES;
+        [swatch.heightAnchor constraintEqualToConstant:26].active = YES;
+        [items addObject:swatch];
+    }
+    _hexField = [NSTextField textFieldWithString:@""];
+    _hexField.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
+    _hexField.placeholderString = @"#RRGGBB";
+    _hexField.toolTip = @"输入十六进制颜色，按回车应用";
+    _hexField.accessibilityLabel = @"十六进制颜色";
+    _hexField.usesSingleLineMode = YES;
+    _hexField.delegate = self;
+    _hexField.translatesAutoresizingMaskIntoConstraints = NO;
+    [_hexField.widthAnchor constraintEqualToConstant:70].active = YES;
+    [items addObject:_hexField];
+
+    _palette = [NSStackView stackViewWithViews:items];
+    _palette.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    _palette.edgeInsets = NSEdgeInsetsMake(4, 6, 4, 6);
+    _palette.spacing = 2;
+    _palette.wantsLayer = YES;
+    _palette.layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
+    _palette.layer.cornerRadius = 8;
+    _palette.layer.shadowOpacity = 0.25;
+    _palette.layer.shadowRadius = 6;
+    _palette.hidden = YES;
+    [self addSubview:_palette];
+}
+
+- (void)togglePalette:(__unused NSButton *)button {
+    if (_palette == nil) {
+        [self setupPalette];
+    }
+    _palette.hidden = !_palette.hidden;
+    _feedback.stringValue = @"";
+    if (!_palette.hidden) {
+        _hexField.stringValue = [NSString stringWithFormat:@"#%06X", [self visibleAnnotationRGB]];
+    }
+    [self.window makeFirstResponder:self];
+    [self updateToolbar];
+}
+
+- (void)applyAnnotationRGB:(uint32_t)rgb {
+    _annotationRGB = rgb;
+    CaptureAnnotation *mark = _selectedMark;
+    if (mark != nil && mark.tool != AnnotationMosaic && mark.rgb != rgb) {
+        uint32_t previous = mark.rgb;
+        [_undoActions addObject:^{ mark.rgb = previous; }];
+        mark.rgb = rgb;
+    }
+    _palette.hidden = YES;
+    _feedback.stringValue = @"";
+    [self.window makeFirstResponder:self];
+    self.needsDisplay = YES;
+    [self updateToolbar];
+}
+
+- (void)chooseColor:(NSButton *)button {
+    [self applyAnnotationRGB:(uint32_t)button.tag];
+}
+
+- (void)commitHexColor:(NSString *)value {
+    NSString *hex = [value stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if ([hex hasPrefix:@"#"]) {
+        hex = [hex substringFromIndex:1];
+    }
+    NSCharacterSet *invalid = [[NSCharacterSet characterSetWithCharactersInString:@"0123456789ABCDEFabcdef"] invertedSet];
+    unsigned int rgb;
+    if (hex.length == 6 && [hex rangeOfCharacterFromSet:invalid].location == NSNotFound &&
+        [[NSScanner scannerWithString:hex] scanHexInt:&rgb]) {
+        [self applyAnnotationRGB:rgb];
+    } else {
+        _feedback.stringValue = @"请输入 6 位十六进制颜色";
+        [self updateToolbar];
+    }
+}
+
 - (void)updateToolbar {
     BOOL hidden = _dragging || CGRectIsNull([self selectionInPixels]);
     if (_toolbar == nil) {
@@ -170,11 +298,15 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
         [self setupToolbar:_allowOCR];
     }
     _toolbar.hidden = hidden;
+    if (hidden) {
+        _palette.hidden = YES;
+    }
     _feedback.hidden = _toolbar.hidden || _feedback.stringValue.length == 0;
     if (_toolbar.hidden) {
         return;
     }
     _undo.enabled = _undoActions.count > 0;
+    [self updateColorButton];
     NSSize size = _toolbar.fittingSize;
     CGFloat x = clamp(NSMaxX(_selection) - size.width, 8, MAX(8, NSWidth(self.bounds) - size.width - 8));
     CGFloat y = NSMaxY(_selection) + 7;
@@ -185,11 +317,23 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
         }
     }
     _toolbar.frame = NSMakeRect(x, y, size.width, size.height);
-    _feedback.frame = NSMakeRect(x, y >= 30 ? y - 24 : y + size.height + 4, size.width, 20);
+    CGFloat feedbackY = y >= 30 ? y - 24 : y + size.height + 4;
+    if (_palette != nil && !_palette.hidden) {
+        NSSize paletteSize = _palette.fittingSize;
+        CGFloat paletteX = clamp(NSMaxX(_toolbar.frame) - paletteSize.width, 8,
+                                 MAX(8, NSWidth(self.bounds) - paletteSize.width - 8));
+        CGFloat below = y + size.height + 5;
+        BOOL fitsBelow = below + paletteSize.height + 8 <= NSHeight(self.bounds);
+        CGFloat paletteY = fitsBelow ? below : MAX(8, y - paletteSize.height - 5);
+        _palette.frame = NSMakeRect(paletteX, paletteY, paletteSize.width, paletteSize.height);
+        feedbackY = fitsBelow ? MAX(0, y - 24) : MIN(NSHeight(self.bounds) - 20, below);
+    }
+    _feedback.frame = NSMakeRect(x, feedbackY, size.width, 20);
 }
 
 - (void)setTool:(AnnotationTool)tool {
     _tool = tool;
+    _palette.hidden = YES;
     _selectedMark = nil;
     self.needsDisplay = YES;
     for (NSButton *button in _tools) {
@@ -264,6 +408,7 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
         CaptureAnnotation *mark = [CaptureAnnotation new];
         mark.tool = AnnotationText;
         mark.start = _textAnchor;
+        mark.rgb = _annotationRGB;
         mark.text = value;
         [self addMark:mark];
         self.needsDisplay = YES;
@@ -272,6 +417,17 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
 }
 
 - (BOOL)control:(NSControl *)control textView:(NSTextView *)editor doCommandBySelector:(SEL)selector {
+    if (control == _hexField) {
+        if (selector == @selector(insertNewline:)) {
+            [self commitHexColor:editor.string];
+            return YES;
+        }
+        if (selector == @selector(cancelOperation:)) {
+            [self togglePalette:nil];
+            return YES;
+        }
+        return NO;
+    }
     if (selector == @selector(insertNewline:)) {
         [self commitText];
     } else if (selector == @selector(cancelOperation:)) {
@@ -442,6 +598,10 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
 
 - (void)mouseDown:(NSEvent *)event {
     _begin(self);
+    if (_palette != nil && !_palette.hidden) {
+        _palette.hidden = YES;
+        _feedback.stringValue = @"";
+    }
     [self commitText];
     [self.window makeFirstResponder:self];
     NSPoint point = [self pointForEvent:event];
@@ -459,6 +619,7 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
             }
             _draft = [CaptureAnnotation new];
             _draft.tool = _tool;
+            _draft.rgb = _annotationRGB;
             _draft.start = point;
             _draft.end = point;
         }
@@ -474,6 +635,7 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
                 _markInitialStart = mark.start;
                 _markInitialEnd = mark.end;
                 _anchor = point;
+                [self updateColorButton];
                 return;
             }
         }
@@ -594,6 +756,10 @@ typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
     }
     unichar key = [chars characterAtIndex:0];
     if (key == 0x1b) {
+        if (_palette != nil && !_palette.hidden) {
+            [self togglePalette:nil];
+            return;
+        }
         _output(DestinationCancel, nil, self.window);
         return;
     }

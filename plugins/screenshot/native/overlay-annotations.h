@@ -4,8 +4,12 @@ typedef NS_ENUM(NSInteger, AnnotationTool) {
     AnnotationSelect, AnnotationArrow, AnnotationRectangle, AnnotationText, AnnotationMosaic,
 };
 
+extern const uint32_t CaptureDefaultAnnotationRGB;
+NSColor *captureAnnotationColor(uint32_t rgb);
+
 @interface CaptureAnnotation : NSObject
 @property AnnotationTool tool;
+@property uint32_t rgb;
 @property NSPoint start;
 @property NSPoint end;
 @property(copy) NSString *text;
