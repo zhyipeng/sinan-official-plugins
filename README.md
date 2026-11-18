@@ -125,7 +125,7 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 
 ## 截图插件
 
-截图开发版 0.3.0 面向 macOS 和 Windows x64/ARM64，使用原生遮罩完成标注、复制、保存和 OCR 交接；独立图片后处理入口和新版 Linux 截图资产已移除。详见[截图说明](plugins/screenshot/README.md)。
+[截图 0.3.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.3.0) 面向 macOS 和 Windows x64/ARM64，使用原生遮罩完成标注、复制、保存和 OCR 交接；独立图片后处理入口和新版 Linux 截图资产已移除。详见[截图说明](plugins/screenshot/README.md)。
 
 已发布 **截图**（`tools.screenshot` 0.1.0），提供区域截图、箭头/矩形/文字标注、撤销重做、复制与 PNG 保存。三端原生捕获适配、系统依赖、自动返回和验证边界见[截图说明](plugins/screenshot/README.md)。沿用现有协议、SDK 和权限格式；首版尚未接入 GNOME/KDE Wayland Portal。构建、测试、打包与三平台手动 CI 在既有功能之后追加，不自动安装，发行通过独立标签流程。
 

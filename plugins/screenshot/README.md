@@ -1,6 +1,6 @@
 # 截图（tools.screenshot）
 
-开发版 0.3.0 面向 macOS 和 Windows，支持 Apple Silicon、Intel x64 和 Windows ARM64。使用「截图」搜索命令或全局快捷键开始。macOS 默认 Command+Shift+A，Windows 默认 Ctrl+Shift+A，可在 Sinan 设置中修改。
+0.3.0 面向 macOS 和 Windows，支持 Apple Silicon、Intel x64 和 Windows ARM64。使用「截图」搜索命令或全局快捷键开始。macOS 默认 Command+Shift+A，Windows 默认 Ctrl+Shift+A，可在 Sinan 设置中修改。
 
 ## 遮罩
 
@@ -33,6 +33,6 @@ python3 scripts/check-screenshot.py
 
 macOS 目标需要 Xcode 命令行工具及 macOS 14 或更新 SDK。从 macOS 或 Windows 构建 Windows 辅助程序时，脚本使用按 SHA-256 固定的 LLVM-MinGW，首次构建需要 Python 3.12 和网络。已有该工具链时可设置 `SINAN_SCREENSHOT_LLVM_MINGW` 指向其目录。Windows 插件的运行不依赖开发工具链。
 
-开发版在 macOS arm64 通过无界面回归和模拟 Host API 的 stdio 测试，macOS/Windows 两架构均已构建并打包。Windows 原生测试程序的实际执行和桌面行为仍待目标系统验证。
+[0.3.0 发行](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.3.0) 已公开，四份 ZIP 已回下载核对。macOS arm64 和 Windows x64 通过无界面检查及模拟 Host API 的 stdio 测试，Windows x64 原生绘制检查通过，Windows ARM64 已交叉构建。真实桌面的遮罩、焦点、多屏、输入法及元素命中待验收。
 
 [0.1.0 历史发行](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.1.0)
