@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>脚本</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header id="library-toolbar" class="toolbar">
+      <nav aria-label="脚本管理">
+        <button type="button" data-panel="library" aria-current="page">脚本</button>
+        <button type="button" data-panel="directories">目录</button>
+        <button type="button" data-panel="environments">环境</button>
+      </nav>
+      <button id="refresh" type="button">刷新</button>
+    </header>
+
+    <section id="library">
+      <div class="controls">
+        <input id="search" type="search" placeholder="搜索名称或关键字" aria-label="搜索脚本" maxlength="256" autofocus>
+        <button id="import" type="button">导入脚本</button>
+        <button id="create" type="button" class="primary" disabled>新建脚本</button>
+      </div>
+      <ul id="scripts" class="rows" aria-label="脚本列表"></ul>
+      <p id="empty" class="empty" hidden></p>
+      <div id="pagination" class="pagination" hidden>
+        <span id="page-info"></span>
+        <button id="previous" type="button" aria-label="上一页">上一页</button>
+        <button id="next" type="button" aria-label="下一页">下一页</button>
+      </div>
+    </section>
+
+    <section id="directories" hidden>
+      <div class="section-heading">
+        <h1>脚本目录</h1>
+        <button id="add-directory" type="button" class="primary">添加目录</button>
+      </div>
+      <ul id="directory-list" class="rows"></ul>
+      <p id="directories-empty" class="empty" hidden>添加目录后，自动发现其中的 .py、.js 和 .sh 文件。</p>
+    </section>
+
+    <section id="environments" hidden>
+      <div class="section-heading">
+        <h1>运行环境</h1>
+        <button id="add-environment" type="button" class="primary">添加环境</button>
+      </div>
+      <h2>自动发现</h2>
+      <ul id="automatic-environments" class="rows"></ul>
+      <p id="automatic-empty" class="empty" hidden>当前 PATH 中没有可用解释器。</p>
+      <h2>自定义</h2>
+      <ul id="manual-environments" class="rows"></ul>
+      <p id="manual-empty" class="empty" hidden>暂无自定义环境。</p>
+    </section>
+    <section id="output-view" hidden>
+      <header class="section-heading">
+        <h1 id="output-title"></h1>
+        <button id="back-to-list" type="button">返回列表</button>
+      </header>
+      <p id="output-state" role="status"></p>
+      <pre id="output-text" tabindex="0" aria-label="脚本输出"></pre>
+      <p id="output-note" class="meta" hidden></p>
+      <p id="output-path" class="log-path" hidden></p>
+    </section>
+    <footer id="status" role="status" hidden></footer>
+  </main>
+
+  <dialog id="editor" aria-labelledby="editor-title">
+    <form id="editor-form">
+      <header class="section-heading"><h1 id="editor-title"></h1></header>
+      <p id="selected-path" class="path" hidden></p>
+      <label id="directory-field" hidden>保存目录<select id="directory-choice"></select></label>
+      <label id="name-field" hidden><span id="name-label"></span><input id="name" maxlength="255"></label>
+      <label id="environment-field" hidden>运行环境<select id="environment-choice"></select></label>
+      <label id="keywords-field" hidden>搜索关键字
+        <input id="keywords" maxlength="1920" placeholder="用逗号分隔多个关键字">
+      </label>
+      <label id="source-field" hidden>初始内容
+        <textarea id="source" rows="5" spellcheck="false" autocomplete="off"></textarea>
+      </label>
+      <fieldset id="script-options" hidden>
+        <label><input id="searchable" type="checkbox"> 在全局搜索中显示</label>
+        <label><input id="show-output" type="checkbox"> 运行时打开输出页</label>
+      </fieldset>
+      <p id="editor-error" class="error" role="alert" hidden></p>
+      <div class="form-actions">
+        <button id="remove-import" type="button" class="remove" hidden>取消导入</button>
+        <button id="cancel" type="button">取消</button>
+        <button id="save" type="submit" class="primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -18,6 +18,15 @@ const PluginHandoffCapability = "ui.plugin-handoff.v1"
 const ImageCommandCapability = "ui.image-command.v1"
 const MaxImageCommandBytes = 6 << 20
 
+const NotificationsCapability = "notifications.v1"
+const NotificationMaxTitleBytes = 160
+const NotificationMaxBodyBytes = 512
+
+type NotificationParams struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
 type ClipboardContent struct {
 	Kind string `json:"kind"`
 	Data []byte `json:"data"`

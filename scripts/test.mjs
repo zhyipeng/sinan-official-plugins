@@ -15,6 +15,7 @@ run('go',['test','-race','./backend'],join(root,'plugins/calculator'));
 run('go',['test','-race','./backend','./internal/...'],join(root,'plugins/ocr'));
 
 run('go',['test','-race','./backend'],join(root,'plugins/screenshot'));
+run('go',['test','-race','./backend'],join(root,'plugins/script'));
 
 
 if(process.platform==='darwin'){

@@ -142,3 +142,7 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 [截图 0.1.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.1.0) 与 [OCR 0.3.0](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.ocr-v0.3.0) 已公开，均为六目标包，最低宿主 [Sinan 0.4.0](https://github.com/zhyipeng/sinan/releases/tag/v0.4.0)。SDK 直接来自配套宿主提交 31dc517；旧版记录和不可变资产保留。
 
 [截图发布流水线](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44070601312)、[OCR 六目标原生验证](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44071389046)及[正式发布](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44072351423)通过。首次 Windows 验证的进程退出观测竞态已修复并补充三项测试，六目标重验全部通过。运行构建和无界面/原生合成图验证不代表真实桌面/WebView、剪贴板、授权和多屏验收。
+
+## 脚本插件
+
+独立官方插件「脚本」支持解释器自动发现和手动配置、多个脚本目录、全局关键字搜索、脚本导入、创建和运行。每个脚本可配置全局搜索显示和运行输出页，默认后台运行并发送结果通知。最低宿主版本为 Sinan 0.6.0。发行流程构建 macOS、Windows、Linux 的 arm64/amd64 六个目标。功能和各平台的解释器要求见[脚本插件说明](plugins/script/README.md)。

@@ -51,6 +51,7 @@ jobs:
           if ($result.ExitCode -ne 0) { exit $result.ExitCode }
       - if: matrix.os != 'linux'
         run: python -X utf8 scripts/check-screenshot.py
+      - run: node scripts/build-script.mjs --target=${{ matrix.os }}-arm64 --target=${{ matrix.os }}-amd64
       - run: python scripts/package.py
       - uses: actions/upload-artifact@v4
         with:

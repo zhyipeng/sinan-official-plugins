@@ -211,40 +211,48 @@ func (h *HostClient) ClipboardWrite(ctx context.Context, content protocol.Clipbo
 	_, err := h.clipboard(ctx, "clipboard.write", protocol.ClipboardParams{Content: content})
 	return err
 }
+func (h *HostClient) Notify(ctx context.Context, params protocol.NotificationParams) error {
+	return h.call(ctx, "notifications.send", params, nil, 195*time.Second, 4096)
+}
+
 func (h *HostClient) clipboard(ctx context.Context, method string, params protocol.ClipboardParams) (protocol.ClipboardResult, error) {
 	var result protocol.ClipboardResult
-	if h == nil {
-		return result, errors.New("宿主剪贴板 API 不可用")
-	}
-	// Clipboard snapshots up to the protocol ceiling need more than a flat
-	// second; scale the deadline with the maximum allowed payload.
+	// Clipboard deadlines scale with the maximum allowed snapshot.
 	budget := 2*time.Second + time.Duration(protocol.MaxClipboardMessageBytes/(512<<10))*100*time.Millisecond
+	err := h.call(ctx, method, params, &result, budget, protocol.MaxClipboardMessageBytes-1024)
+	return result, err
+}
+
+func (h *HostClient) call(ctx context.Context, method string, params, result any, budget time.Duration, maxBytes int) error {
+	if h == nil {
+		return errors.New("宿主 API 不可用")
+	}
+	raw, err := json.Marshal(params)
+	if err != nil || len(raw) > maxBytes {
+		return errors.New("宿主调用参数超出限制")
+	}
 	ctx, cancel := context.WithTimeout(ctx, budget)
 	defer cancel()
 	if err := ctx.Err(); err != nil {
-		return result, err
+		return err
 	}
 	id := h.next.Add(1)
 	ch := make(chan protocol.Response, 1)
 	h.mu.Lock()
 	if len(h.pending) >= 4 {
 		h.mu.Unlock()
-		return result, errors.New("宿主调用繁忙")
+		return errors.New("宿主调用繁忙")
 	}
 	h.pending[id] = ch
 	h.mu.Unlock()
 	defer func() { h.mu.Lock(); delete(h.pending, id); h.mu.Unlock() }()
-	raw, err := json.Marshal(params)
-	if err != nil || len(raw) > protocol.MaxClipboardMessageBytes-1024 {
-		return result, errors.New("剪贴板内容超出限制")
-	}
 	sent := make(chan error, 1)
 	select {
 	case h.sendSlots <- struct{}{}:
 	case <-ctx.Done():
-		return result, ctx.Err()
+		return ctx.Err()
 	case <-h.done:
-		return result, io.EOF
+		return io.EOF
 	}
 	go func() {
 		defer func() { <-h.sendSlots }()
@@ -253,23 +261,25 @@ func (h *HostClient) clipboard(ctx context.Context, method string, params protoc
 	select {
 	case err = <-sent:
 		if err != nil {
-			return result, err
+			return err
 		}
 	case <-ctx.Done():
-		return result, ctx.Err()
+		return ctx.Err()
 	case <-h.done:
-		return result, io.EOF
+		return io.EOF
 	}
 	select {
 	case response := <-ch:
 		if response.Error != nil {
-			return result, response.Error
+			return response.Error
 		}
-		err = json.Unmarshal(response.Result, &result)
-		return result, err
+		if result == nil {
+			return nil
+		}
+		return json.Unmarshal(response.Result, result)
 	case <-ctx.Done():
-		return result, ctx.Err()
+		return ctx.Err()
 	case <-h.done:
-		return result, io.EOF
+		return io.EOF
 	}
 }

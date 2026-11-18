@@ -28,6 +28,8 @@ export function showWindow(): Promise<null>;
 export function hideWindow(): Promise<null>;
 export function savePNG(commandId:string,input:string): Promise<{saved:boolean}>;
 
+export function pickPath(kind:"file"|"directory"): Promise<string|null>;
+
 export function openImage(): Promise<UIImage|null>;
 
 export interface DependencyStatus {id:string;pluginId:string;state:string;message:string;optional:boolean;minVersion:string}

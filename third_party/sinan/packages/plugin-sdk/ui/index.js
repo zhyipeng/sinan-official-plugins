@@ -44,6 +44,8 @@ export function showWindow() { return call({method:"window.show"}); }
 export function hideWindow() { return call({method:"window.hide"}); }
 export function savePNG(commandId,input) { return call({method:"file.savePNG",commandId,input}); }
 
+export function pickPath(kind) { return call({method:"file.pickPath",input:kind}); }
+
 export function openImage() { return call({method:"file.openImage"}); }
 
 export function readDependencies() { return call({method:'dependency.status'}); }
