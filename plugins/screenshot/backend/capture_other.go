@@ -7,6 +7,6 @@ import (
 	"errors"
 )
 
-func capturePlatform(context.Context, string) error {
+func captureSystemRegion(context.Context, string) error {
 	return errors.New("当前平台不支持区域截图")
 }

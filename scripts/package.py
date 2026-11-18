@@ -44,6 +44,13 @@ def package(source, output, os, arch):
         verify_native((source / entry).read_bytes(), os, arch)
     else:
         assert manifest["runtime"]["kind"] == "declarative" and not (source / "backend").exists(), "声明式包不能混入后端"
+    if manifest["id"] == "tools.screenshot":
+        helper = source / "backend" / "capture-macos"
+        if os == "darwin":
+            assert helper.is_file() and not helper.is_symlink(), "macOS 截图包缺少原生选区组件"
+            verify_native(helper.read_bytes(), os, arch)
+        else:
+            assert not helper.exists(), "仅 macOS 截图包可包含原生选区组件"
     files = list(source.rglob("*"))
     assert len(files) <= 2048 and sum(f.stat().st_size for f in files if f.is_file()) <= 64 << 20, "插件解压内容超过宿主预算"
     output.mkdir(parents=True, exist_ok=True)

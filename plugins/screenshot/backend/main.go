@@ -24,12 +24,13 @@ const maxImage = 8 << 20
 const chunkSize = 36 << 10
 
 type snapshot struct {
-	ID    string `json:"id,omitempty"`
-	State string `json:"state,omitempty"`
-	Error string `json:"error,omitempty"`
-	Size  int    `json:"size,omitempty"`
-	Data  string `json:"data,omitempty"`
-	Path  string `json:"path,omitempty"`
+	Action captureAction `json:"action,omitempty"`
+	ID     string        `json:"id,omitempty"`
+	State  string        `json:"state,omitempty"`
+	Error  string        `json:"error,omitempty"`
+	Size   int           `json:"size,omitempty"`
+	Data   string        `json:"data,omitempty"`
+	Path   string        `json:"path,omitempty"`
 }
 type service struct {
 	closed   bool
@@ -41,7 +42,7 @@ type service struct {
 	uploadID string
 	touched  time.Time
 	cancel   context.CancelFunc
-	capture  func(context.Context) ([]byte, error)
+	capture  func(context.Context, bool) (captureResult, error)
 	write    func(context.Context, []byte) error
 }
 
@@ -67,7 +68,7 @@ func validateImage(data []byte) error {
 	}
 	return nil
 }
-func (s *service) start() (snapshot, error) {
+func (s *service) start(allowOCR bool) (snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed {
@@ -88,9 +89,9 @@ func (s *service) start() (snapshot, error) {
 	go func() {
 		defer s.workers.Done()
 		defer cancel()
-		data, err := s.capture(ctx)
-		if err == nil {
-			err = validateImage(data)
+		result, err := s.capture(ctx, allowOCR)
+		if err == nil && result.action != captureCompleted {
+			err = validateImage(result.data)
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
@@ -102,9 +103,10 @@ func (s *service) start() (snapshot, error) {
 			s.job.Error = err.Error()
 			return
 		}
-		s.image = data
+		s.image = result.data
 		s.job.State = "done"
-		s.job.Size = len(data)
+		s.job.Size = len(result.data)
+		s.job.Action = result.action
 	}()
 	return s.job, nil
 }
@@ -150,16 +152,16 @@ func (s *service) execute(ctx context.Context, p protocol.CommandParams) (snapsh
 		return snapshot{}, err
 	}
 	if p.CommandID == "capture-region" {
-		if p.Input != "" {
-			return snapshot{}, errors.New("截图不接受外部参数")
+		if p.Input != "" && p.Input != "ocr" {
+			return snapshot{}, errors.New("不支持的截图选项")
 		}
-		return s.captureForView(ctx)
+		return s.captureForView(ctx, p.Input == "ocr")
 	}
 	if p.CommandID == "start" {
 		if p.Input != "" {
 			return snapshot{}, errors.New("截图不接受外部参数")
 		}
-		return s.start()
+		return s.start(false)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -266,8 +268,8 @@ func main() {
 
 // The host owns hiding and restoration; keep the private task lease alive while
 // waiting on a cancellable stdio command, without polling the hidden WebView.
-func (s *service) captureForView(ctx context.Context) (snapshot, error) {
-	first, err := s.start()
+func (s *service) captureForView(ctx context.Context, allowOCR bool) (snapshot, error) {
+	first, err := s.start(allowOCR)
 	if err != nil {
 		return snapshot{}, err
 	}

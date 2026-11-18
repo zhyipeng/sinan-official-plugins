@@ -13,18 +13,29 @@ async function cancel(){epoch++;const id=job;job='';busy=false;refresh();status(
 async function start(){
  if(busy||disposed)return;const ticket=++epoch;busy=true;refresh();status('拖动选择区域，Esc 取消');
  try{
-  const result=JSON.parse((await executeHidden('capture-region')).text);
+  const result=JSON.parse((await executeHidden('capture-region','ocr')).text);
   if(ticket!==epoch||disposed){if(result.id)void command('cancel',result.id).catch(()=>{});return;}
   if(result.error || result.state!=='done')throw new Error(result.error||'截图已取消');
+  if(result.action==='completed')return;
   job=result.id;refresh();
   if(!Number.isSafeInteger(result.size)||result.size<1||result.size>8*1024*1024)throw new Error('截图大小超限');
   const chunks=[];let size=0;status('正在读取截图…');
   while(size<result.size){const chunk=decodeChunk((await command('read',`${job}:${size}`)).data);if(!chunk.length||size+chunk.length>result.size)throw new Error('截图分块无效');chunks.push(chunk);size+=chunk.length;if(ticket!==epoch||disposed)return;}
-  const bitmap=await createImageBitmap(new Blob(chunks,{type:'image/png'}));
+  const image=new Blob(chunks,{type:'image/png'});
+  let ocrError='';
+  if(result.action==='ocr'){
+   try{
+    await requireOCR();
+    await openOCR(image,ticket,true);
+    return;
+   }catch(error){ocrError=error.message||'无法打开 OCR';}
+  }
+  if(ticket!==epoch||disposed)return;
+  const bitmap=await createImageBitmap(image);
   if(ticket!==epoch||disposed){bitmap.close();return;}
   $('editor').hidden=false;
   try{if(!editor)editor=createEditor($('editor'),(width,height)=>{$('dimensions').textContent=`${width} × ${height}`;});editor.load(bitmap);hasImage=true;}finally{bitmap.close();}
-  $('empty').hidden=true;await showWindow();status('截图完成');
+  $('empty').hidden=true;await showWindow();status(ocrError||'截图完成',Boolean(ocrError));
 
  }catch(error){if(ticket===epoch&&!disposed){status(error.message||'截图失败',true);await hideWindow().catch(()=>{});}}
  finally{if(ticket===epoch){const id=job;job='';busy=false;refresh();if(id)void command('cancel',id).catch(()=>{});}}
@@ -56,18 +67,33 @@ async function output(kind){
   if(disposed)return;if(kind==='copy'){await command('copy',upload.id);status('已复制并关闭');await hideWindow();}else{const result=await savePNG('save',upload.id);status(result.saved?'已保存 PNG':'已取消保存');}
  }catch(error){status(error.message||'导出失败',true);}finally{busy=false;refresh();}
 }
-async function recognize(){
- if(busy||!hasImage||disposed)return;const ticket=epoch;busy=true;refresh();status('正在检查 OCR…');let handle='';
+async function requireOCR(){
+ const ocr=(await readDependencies()).find(dep=>dep.id==='ocr');
+ $('manage-dependency').hidden=ocr?.state==='available';
+ if(ocr?.state!=='available')throw new Error(ocr?.message||'OCR 插件不可用');
+}
+async function openOCR(blob,ticket,fromOverlay=false){
+ let handle='';
  try{
-  const dependencies=await readDependencies(),ocr=dependencies.find(dep=>dep.id==='ocr');
-  if(!ocr||ocr.state!=='available'){$('manage-dependency').hidden=false;throw new Error(ocr?.message||'OCR 插件不可用');}
-  $('manage-dependency').hidden=true;
-  const blob=await editor.exportPNG();if(ticket!==epoch||disposed)return;
+  if(ticket!==epoch||disposed)return;
   status('正在打开 OCR…');handle=await stageDependencyImage('ocr','recognize-image',blob);
   if(ticket!==epoch||disposed)return;
+  if(fromOverlay){
+   // The host swaps the embedded view but does not reveal its hidden window.
+   $('editor').hidden=true;$('empty').hidden=true;
+   await showWindow();
+  }
+  if(ticket!==epoch||disposed)return;
   await openDependency('ocr','recognize-image',{imageHandle:handle});handle='';
+ }finally{if(handle)await discardDependencyImage(handle).catch(()=>{});}
+}
+async function recognize(){
+ if(busy||!hasImage||disposed)return;const ticket=epoch;busy=true;refresh();status('正在检查 OCR…');
+ try{
+  await requireOCR();
+  await openOCR(await editor.exportPNG(),ticket);
  }catch(error){if(!disposed&&ticket===epoch)status(error.message||'无法打开 OCR',true);}
- finally{if(handle)await discardDependencyImage(handle).catch(()=>{});if(!disposed){busy=false;refresh();}}
+ finally{if(!disposed){busy=false;refresh();}}
 }
 $('ocr').addEventListener('click',()=>void recognize());
 $('manage-dependency').addEventListener('click',()=>{void openDependencyManager().catch(error=>status(error.message||'无法打开插件中心',true));});

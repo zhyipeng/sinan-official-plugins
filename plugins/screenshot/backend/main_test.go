@@ -34,7 +34,7 @@ func call(t *testing.T, s *service, id, input string) snapshot {
 }
 func TestCaptureLifecycle(t *testing.T) {
 	data := fixture(t)
-	s := &service{capture: func(context.Context) ([]byte, error) { return data, nil }}
+	s := &service{capture: func(context.Context, bool) (captureResult, error) { return captureResult{data: data}, nil }}
 	first := call(t, s, "start", "")
 	var result snapshot
 	for i := 0; i < 100; i++ {
@@ -59,9 +59,13 @@ func TestCaptureLifecycle(t *testing.T) {
 }
 func TestCancelAndShutdownKillCapture(t *testing.T) {
 	stopped := make(chan struct{})
-	s := &service{capture: func(ctx context.Context) ([]byte, error) { <-ctx.Done(); close(stopped); return nil, ctx.Err() }}
+	s := &service{capture: func(ctx context.Context, _ bool) (captureResult, error) {
+		<-ctx.Done()
+		close(stopped)
+		return captureResult{}, ctx.Err()
+	}}
 	first := call(t, s, "start", "")
-	if _, err := s.start(); err == nil {
+	if _, err := s.start(false); err == nil {
 		t.Fatal("允许并发截图")
 	}
 	// Wrong task IDs cannot cancel another capture.
@@ -137,7 +141,7 @@ func TestRejectInvalidAndOutOfOrderUploads(t *testing.T) {
 	}
 }
 func TestCaptureFailureAndWriteFailure(t *testing.T) {
-	s := &service{capture: func(context.Context) ([]byte, error) { return nil, errors.New("模拟拒绝") }, write: func(context.Context, []byte) error { return errors.New("模拟失败") }}
+	s := &service{capture: func(context.Context, bool) (captureResult, error) { return captureResult{}, errors.New("模拟拒绝") }, write: func(context.Context, []byte) error { return errors.New("模拟失败") }}
 	id := call(t, s, "start", "").ID
 	for i := 0; i < 100; i++ {
 		v := call(t, s, "poll", id)
@@ -183,14 +187,14 @@ func TestCommandReportsActionableErrors(t *testing.T) {
 		t.Fatal("错误被 SDK 通用 handler failed 吞掉", result)
 	}
 	s.closed = true
-	if _, err = s.start(); err == nil {
+	if _, err = s.start(false); err == nil {
 		t.Fatal("退出后仍能启动截图")
 	}
 }
 
 func TestHiddenCaptureReturnsCompletedTaskWithoutPagePolling(t *testing.T) {
 	data := fixture(t)
-	s := &service{capture: func(context.Context) ([]byte, error) { return data, nil }}
+	s := &service{capture: func(context.Context, bool) (captureResult, error) { return captureResult{data: data}, nil }}
 	value, err := s.execute(context.Background(), protocol.CommandParams{CommandID: "capture-region"})
 	if err != nil || value.State != "done" || value.Size != len(data) || value.ID == "" {
 		t.Fatal("hidden capture did not complete", value, err)
@@ -201,10 +205,14 @@ func TestHiddenCaptureReturnsCompletedTaskWithoutPagePolling(t *testing.T) {
 }
 func TestHiddenCaptureCancellationStopsNativeTask(t *testing.T) {
 	stopped := make(chan struct{})
-	s := &service{capture: func(ctx context.Context) ([]byte, error) { <-ctx.Done(); close(stopped); return nil, ctx.Err() }}
+	s := &service{capture: func(ctx context.Context, _ bool) (captureResult, error) {
+		<-ctx.Done()
+		close(stopped)
+		return captureResult{}, ctx.Err()
+	}}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := s.captureForView(ctx)
+	_, err := s.captureForView(ctx, false)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
@@ -219,16 +227,16 @@ func TestHiddenCaptureCancellationStopsNativeTask(t *testing.T) {
 func TestCaptureWithoutValidImageDismissesPostProcessing(t *testing.T) {
 	for _, kind := range []string{"cancelled", "missing", "empty", "invalid", "image"} {
 		t.Run(kind, func(t *testing.T) {
-			s := &service{capture: func(context.Context) ([]byte, error) {
+			s := &service{capture: func(context.Context, bool) (captureResult, error) {
 				switch kind {
 				case "cancelled", "missing":
-					return nil, errors.New("未生成图片")
+					return captureResult{}, errors.New("未生成图片")
 				case "empty":
-					return nil, nil
+					return captureResult{}, nil
 				case "invalid":
-					return []byte("not png"), nil
+					return captureResult{data: []byte("not png")}, nil
 				default:
-					return fixture(t), nil
+					return captureResult{data: fixture(t)}, nil
 				}
 			}}
 			result, err := s.command(context.Background(), protocol.CommandParams{CommandID: "capture-region"})
@@ -245,6 +253,36 @@ func TestCaptureWithoutValidImageDismissesPostProcessing(t *testing.T) {
 			}
 			if kind == "image" && (value.State != "done" || value.Size == 0) {
 				t.Fatal("valid image lost")
+			}
+		})
+	}
+}
+
+func TestCaptureOverlayRoutesCompletionAndOCR(t *testing.T) {
+	for _, action := range []captureAction{captureCompleted, captureOCR} {
+		t.Run(string(action), func(t *testing.T) {
+			result := captureResult{action: action}
+			if action == captureOCR {
+				result.data = fixture(t)
+			}
+			s := &service{capture: func(_ context.Context, allowed bool) (captureResult, error) {
+				if !allowed {
+					return captureResult{}, errors.New("缺少 OCR 选项")
+				}
+				return result, nil
+			}}
+			value, err := s.command(context.Background(), protocol.CommandParams{CommandID: "capture-region", Input: "ocr"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			s.workers.Wait()
+			var got snapshot
+			if err = json.Unmarshal([]byte(value.Text), &got); err != nil {
+				t.Fatal(err)
+			}
+			if got.State != "done" || got.Action != action || got.Size != len(result.data) ||
+				value.Dismiss != (action == captureCompleted) || value.KeepHidden != (action == captureOCR) {
+				t.Fatalf("截图输出错误：%+v，%+v", got, value)
 			}
 		})
 	}

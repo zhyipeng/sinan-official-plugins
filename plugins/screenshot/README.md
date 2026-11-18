@@ -18,16 +18,20 @@ Command/Ctrl+Z、Shift+Z 撤销/重做，C 复制图片，S 保存；文字编�
 
 | 平台 | 捕获实现 | 依赖和限制 |
 | --- | --- | --- |
-| macOS | `/usr/sbin/screencapture -i -s` | 需要系统屏幕录制授权；拒绝、取消、无文件时明确失败；未实机核验授权归属和多屏行为 |
+| macOS | 14+ 使用 ScreenCaptureKit 和 AppKit 自定义选区；旧版使用 `/usr/sbin/screencapture -i -s` | 需要系统屏幕录制授权；可在任一显示器开始框选，单次选区限定于开始拖动的屏幕；授权归属、焦点以及多屏布局待实机验收 |
 | Windows | 系统 Windows PowerShell 5.1 + WinForms/GDI 选区覆盖层 | 不要求安装第三方模块；使用线程 DPI 感知，虚拟屏幕含负坐标；整个桌面超过 3200 万像素时拒绝；PowerShell 被组织策略禁止、无交互桌面、混合 DPI、HDR 等待验收 |
 | Linux X11 | `scrot --select --freeze` | 需要 DISPLAY 及支持上述参数的 scrot |
 | Linux Wayland | slurp 选区 + grim 捕获 | 仅支持具备 screencopy/layer-shell 的合成器；GNOME/KDE 的 Portal 选区未接入，不能宣称通用 Wayland 支持 |
+
+macOS 14+ 下按一次快捷键即可在任一显示器拖动框选，松手后可拖动选区内部移动、拖动边角调整大小，方向键微调 1 像素，Shift + 方向键微调 10 像素。框选后可在遮罩上直接画箭头、矩形、文字和马赛克，或撤销上一次添加或移动。切回「选区」工具后，拖动现有文字、箭头、矩形或马赛克可重新定位。在另一块屏重新框选会清除原选区。Return、在选区工具下双击、Command+C 或点击「复制」会复制 PNG 并关闭。Command+S 或点击「保存」打开原生保存面板，取消保存会回到遮罩。Esc 或右键取消截图。
+
+遮罩工具栏使用统一的 macOS 线性图标，悬停可查看工具名称和快捷键。可从遮罩打开 OCR，单张 PNG 上限 4 MiB。依赖不可用时显示原因及插件中心入口，交接失败时编辑器保留标注后的 PNG。独立的「截图后处理」仍支持导入和粘贴已有图片。
 
 需要 API 1 / UI Bridge 2、`clipboard.v1` 、`ui.window-execute.v1` 及 `ui.image-output.v1` 配套宿主；已发布 0.3.1 不具备新能力，不能安装在旧宿主上。manifest 使用 startHidden 及视图级 window.execute/window.show/window.hide/file.savePNG 权限，SDK 快照以原来源提交加显式补丁追溯。Linux 复制仍需要宿主对应 X11 xclip 或 Wayland wl-clipboard。manifest 后台权限仅声明现有 `clipboard.write`，不伪造截图权限字段；原生进程直接使用当前用户系统权限，独立进程不构成安全沙箱。安装必须信任原生插件。
 
 ## 数据与生命周期
 
-原图和导出 PNG 限制 8 MiB、3200 万像素，每块原始字节 36 KiB，通过现有 command.execute 传输，不放宽 64 KiB 请求及 192 KiB 页面响应预算，不修改 CSP。页面用 Blob + createImageBitmap 解码并绘制 Canvas，不加载 data/blob URL。图像仅在内存及私有临时目录中处理，临时文件在捕获返回时删除；进程被系统强杀时不能保证临时文件清理。截图失败保留上一张原图和标注，不自动保存历史。
+macOS 遮罩快照限制单屏 3200 万像素、所有显示器合计 9600 万像素。原图和导出 PNG 限制 8 MiB、3200 万像素，每块原始字节 36 KiB，通过现有 command.execute 传输，不放宽 64 KiB 请求及 192 KiB 页面响应预算，不修改 CSP。页面用 Blob + createImageBitmap 解码并绘制 Canvas，不加载 data/blob URL。图像仅在内存及私有临时目录中处理，临时文件在捕获返回时删除；进程被系统强杀时不能保证临时文件清理。截图失败保留上一张原图和标注，不自动保存历史。
 
 每插件最多一个原生选区任务，2 分钟硬预算，宿主持有最长 125 秒的隐藏执行请求，后台 Go 保持私有截图租约；15 秒无活动回收任务和上传缓存。页面退出主动取消，宿主关闭 stdio 后插件取消并等待直接捕获子进程结束；未扩展宿主对任意后代进程的回收能力。截图期间不依赖隐藏页面计时器；任务结束后宿主只恢复原活动会话窗口，撤销或替换不会唤回旧页面。
 
@@ -40,7 +44,7 @@ npm test
 python3 scripts/check-screenshot.py
 ```
 
-输出在 `bin/targets/<os>-<arch>/screenshot`。已接入通用 build、test、package 与三平台手动 CI；源码和交叉构建不代表真实系统支持或正式发行。包由通用打包器核验 Mach-O/PE/ELF 与 .exe 入口，Windows 后台使用 GUI 子系统。
+输出在 `bin/targets/<os>-<arch>/screenshot`。macOS 目标（包括 `--all`）须在安装 Xcode 命令行工具及 macOS 14 或更新 SDK 的 Mac 上构建，包内 `backend/capture-macos` 与 Go 后端使用同一架构。已接入通用 build、test、package 与三平台手动 CI；源码和交叉构建不代表真实系统支持或正式发行。包由通用打包器核验 Mach-O/PE/ELF 与 .exe 入口，Windows 后台使用 GUI 子系统。
 
 本轮在 macOS arm64 通过 121 项 JS、11 项 Python、五个后台竞态检查、截图六目标构建/静态检查及通用打包；具体结果见宿主仓库 `docs/adr/0076-hidden-window-commands.md`。未读取真实屏幕/系统剪贴板、触发授权或启动原生窗口/浏览器；Windows/Linux 原生工具执行、三端 WebView/焦点/多屏/DPI 均未实机验收。当时尚未发行；最终发行见下方记录，未修改现有安装。
 
@@ -67,3 +71,5 @@ python3 scripts/check-screenshot.py
 ## 发行结果
 
 [0.1.0 六目标发行](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.1.0)已完成，最低宿主 Sinan 0.4.0，可选 OCR ≥ 0.3.0。[发布流水线](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44070601312)通过，六份 ZIP 已回下载核对版本、依赖、原生入口/架构、大小、SHA-256 和图标一致性。真实截图、WebView 和权限交互尚未实机验收。
+
+开发版 0.2.0 增加 macOS 多显示器遮罩、遮罩内标注和直接输出，最低宿主仍为 Sinan 0.4.0，尚待实机验收与发行。

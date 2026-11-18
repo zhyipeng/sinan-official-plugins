@@ -10,14 +10,14 @@ const bundle=await build({entryPoints:['plugins/screenshot/ui/app.js'],bundle:tr
  b.onLoad({filter:/.*/,namespace:'fixture'},({path})=>({contents:path==='editor'?'export const createEditor=(...args)=>globalThis.makeEditor(...args);':'export const ready=()=>{};export const execute=(...args)=>globalThis.host(...args);export const executeHidden=(...args)=>globalThis.host(...args);export const readLaunch=()=>globalThis.launch();export const showWindow=()=>globalThis.host("show-window");export const hideWindow=()=>globalThis.host("hide-window");export const savePNG=(...args)=>globalThis.savePNG(...args);export const openImage=()=>globalThis.openImage();export const readClipboardImage=()=>globalThis.readClipboardImage();export const readDependencies=()=>globalThis.dependencies();export const stageDependencyImage=(...args)=>globalThis.stageDependencyImage(...args);export const openDependency=(...args)=>globalThis.openDependency(...args);export const discardDependencyImage=(...args)=>globalThis.discardDependencyImage(...args);export const openDependencyManager=()=>globalThis.openDependencyManager();'}));
 }}]});
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
-function fixture({launch='open',slow=false,decodeFailure=false,copyFailure=false,saved=true,external=null,externalFailure=false,slowExternal=false,ocrState="available",handoffFailure=false}={}){
+function fixture({launch='open',slow=false,decodeFailure=false,copyFailure=false,saved=true,external=null,externalFailure=false,slowExternal=false,ocrState="available",handoffFailure=false,captureAction=""}={}){
  const elements=new Map(),draws=[],commands=[],timers=[],globalHandlers={};let failure=false,finish,finishExternal;const editorCalls=[];
  const drawing=new Proxy({},{get:(_,name)=>(...args)=>draws.push([name,...args]),set:()=>true});
  function element(id){if(!elements.has(id))elements.set(id,{handlers:{},dataset:{},value:id==='width'?'6':id==='color'?'#e5484d':'',hidden:false,disabled:false,textContent:'',addEventListener(type,fn){this.handlers[type]=fn;},setAttribute(){},focus(){},getContext(){return drawing;},getBoundingClientRect(){return {left:0,top:0,width:100,height:50};},setPointerCapture(){},releasePointerCapture(){},toBlob(fn){fn(new Blob([Uint8Array.from([1,2,3])],{type:'image/png'}));}});return elements.get(id);}
  const tools=['arrow','rect','text'].map(tool=>{const e=element(`tool-${tool}`);e.dataset.tool=tool;return e;});
  const win={addEventListener(type,fn){globalHandlers[type]=fn;},getSelection:()=>''};
  vm.runInNewContext(bundle.outputFiles[0].text,{Image:class{async decode(){if(decodeFailure)throw new Error("PNG 解码失败");}},Blob,Uint8Array,atob,btoa,Math,Number,JSON,Error,Promise,document:{getElementById:element,querySelectorAll:()=>tools,addEventListener(type,fn){globalHandlers[type]=fn;}},window:win,setTimeout(fn){timers.push(fn);},createImageBitmap:async()=>{if(decodeFailure)throw new Error('PNG 解码失败');return {width:1000,height:500,close(){}};},makeEditor:(holder,change)=>({load(bitmap){editorCalls.push('load');change(bitmap.width,bitmap.height);},async exportPNG(){editorCalls.push('export');return new Blob([Uint8Array.from([1,2,3])],{type:'image/png'});},setBusy(value){editorCalls.push(['busy',value]);},undo(){editorCalls.push('undo');},redo(){editorCalls.push('redo');},destroy(){editorCalls.push('destroy');}}),dependencies:async()=>[{id:"ocr",state:ocrState,message:"OCR 需要安装或更新"}],stageDependencyImage:async(...args)=>{commands.push(["stage-ocr",...args]);return "image-handle";},openDependency:async(...args)=>{commands.push(["open-ocr",...args]);if(handoffFailure)throw new Error("目标打开失败");},discardDependencyImage:async(id)=>commands.push(["discard-ocr",id]),openDependencyManager:async()=>commands.push(["manage-dependency"]),openImage:async()=>{commands.push(["open-image"]);if(slowExternal)await new Promise(resolve=>{finishExternal=resolve;});if(externalFailure)throw new Error("图片无效");return external;},readClipboardImage:async()=>{commands.push(["read-clipboard-image"]);return external;},savePNG:async()=>({saved}),launch:async()=>({commandId:launch}),host:async(id,input)=>{
-  commands.push([id,input]);let value={};if(id==='copy'&&copyFailure)throw new Error('剪贴板写入失败');if(id==='capture-region'){if(slow)await new Promise(resolve=>{finish=resolve;});value=failure?{state:'failed',error:'模拟取消'}:{state:'done',id:'job',size:3};}if(id==='poll')value=failure?{state:'failed',error:'模拟取消'}:{state:'done',size:3};if(id==='read')value={data:'AQID'};if(id==='upload-start')value={id:'upload'};if(id==='save')value={path:'/Pictures/Sinan/test.png'};return {text:JSON.stringify(value)};
+  commands.push([id,input]);let value={};if(id==='copy'&&copyFailure)throw new Error('剪贴板写入失败');if(id==='capture-region'){if(slow)await new Promise(resolve=>{finish=resolve;});value=failure?{state:'failed',error:'模拟取消'}:{state:'done',id:'job',size:captureAction==='completed'?0:3,action:captureAction};}if(id==='poll')value=failure?{state:'failed',error:'模拟取消'}:{state:'done',size:3};if(id==='read')value={data:'AQID'};if(id==='upload-start')value={id:'upload'};if(id==='save')value={path:'/Pictures/Sinan/test.png'};return {text:JSON.stringify(value)};
  }});
  return {element,draws,commands,editorCalls,globalHandlers,async tick(){timers.shift()?.();await settle();},failDecode(){decodeFailure=true;},async finishExternal(){finishExternal();await settle();},async finishCapture(){finish();await settle();},fail(){failure=true;},async click(id){element(id).handlers.click();await settle();},async capture(){await this.click('start');await settle();await settle();},pointer(type,x,y){element('canvas').handlers[type]({clientX:x,clientY:y,pointerId:1,button:0});},tool(tool){tools.find(e=>e.dataset.tool===tool).handlers.click();}};
 }
@@ -103,4 +103,35 @@ test('缺少或禁用 OCR 保留图片并给出插件中心入口',async()=>{
 });
 test('目标打开失败保留编辑器并释放上传句柄',async()=>{
  const app=fixture({handoffFailure:true});await app.capture();await app.click('ocr');await settle();assert.equal(app.element('status').textContent,'目标打开失败');assert.equal(app.element('copy').disabled,false);assert.ok(app.commands.some(c=>c[0]==='discard-ocr'));assert.ok(!app.commands.some(c=>c[0]==='hide-window'));
+});
+
+
+test('遮罩复制或保存完成后，页面不读取图片或打开编辑器',async()=>{
+ const app=fixture({launch:'capture',captureAction:'completed'});
+ await settle();await settle();
+ assert.ok(app.commands.some(([id])=>id==='capture-region'));
+ assert.ok(!app.commands.some(([id])=>['read','show-window'].includes(id)));
+ assert.ok(!app.editorCalls.includes('load'));
+});
+
+test('遮罩 OCR 直接交接标注图片，交接失败保留标注结果',async()=>{
+ for(const handoffFailure of [false,true]){
+  const app=fixture({launch:'capture',captureAction:'ocr',handoffFailure});
+  await settle();await settle();await settle();
+  assert.ok(app.commands.some(([id,input])=>id==='capture-region'&&input==='ocr'));
+  assert.ok(app.commands.some(([id,,,blob])=>id==='stage-ocr'&&blob instanceof Blob));
+  assert.ok(app.commands.findIndex(([id])=>id==='show-window')<app.commands.findIndex(([id])=>id==='open-ocr'));
+  assert.equal(app.commands.filter(([id])=>id==='show-window').length,handoffFailure?2:1);
+  assert.equal(app.editorCalls.includes('load'),handoffFailure);
+  if(handoffFailure)assert.equal(app.element('status').textContent,'目标打开失败');
+ }
+});
+
+test('遮罩 OCR 缺少依赖时，展示图片和明确的插件中心入口',async()=>{
+ const app=fixture({launch:'capture',captureAction:'ocr',ocrState:'missing'});
+ await settle();await settle();
+ assert.equal(app.element('manage-dependency').hidden,false);
+ assert.match(app.element('status').textContent,/OCR 需要安装或更新/);
+ assert.ok(app.editorCalls.includes('load'));
+ assert.ok(!app.commands.some(([id])=>['stage-ocr','open-ocr'].includes(id)));
 });

@@ -1,0 +1,626 @@
+#import "selection-view.h"
+#import "overlay-annotations.h"
+
+static CGFloat clamp(CGFloat value, CGFloat lower, CGFloat upper) {
+    return MIN(MAX(value, lower), upper);
+}
+
+static NSPoint clampPoint(NSPoint point, NSRect bounds) {
+    return NSMakePoint(clamp(point.x, NSMinX(bounds), NSMaxX(bounds)),
+                       clamp(point.y, NSMinY(bounds), NSMaxY(bounds)));
+}
+
+static NSRect rectBetween(NSPoint anchor, NSPoint point) {
+    return NSMakeRect(MIN(anchor.x, point.x), MIN(anchor.y, point.y),
+                      fabs(point.x - anchor.x), fabs(point.y - anchor.y));
+}
+
+// The view and the CGImage crop both use a top-left origin. Round outward
+// so a selection on a fractional point boundary includes the touched pixels.
+static CGRect pixelRect(NSRect selection, NSSize points, CGSize pixels) {
+    CGFloat scaleX = pixels.width / points.width;
+    CGFloat scaleY = pixels.height / points.height;
+    CGFloat x = floor(NSMinX(selection) * scaleX);
+    CGFloat y = floor(NSMinY(selection) * scaleY);
+    CGRect mapped = CGRectMake(x, y, ceil(NSMaxX(selection) * scaleX) - x,
+                               ceil(NSMaxY(selection) * scaleY) - y);
+    return CGRectIntersection(mapped, CGRectMake(0, 0, pixels.width, pixels.height));
+}
+
+typedef NS_OPTIONS(NSUInteger, SelectionEdge) {
+    EdgeNone = 0,
+    EdgeLeft = 1 << 0,
+    EdgeRight = 1 << 1,
+    EdgeTop = 1 << 2,
+    EdgeBottom = 1 << 3,
+};
+
+@implementation SelectionView {
+    CGImageRef _desktop;
+    NSImage *_background;
+    CGImageRef _mosaic;
+    NSMutableArray<CaptureAnnotation *> *_marks;
+    NSMutableArray<dispatch_block_t> *_undoActions;
+    CaptureAnnotation *_selectedMark;
+    BOOL _movingMark;
+    NSPoint _markInitialStart;
+    NSPoint _markInitialEnd;
+    CaptureAnnotation *_draft;
+    AnnotationTool _tool;
+    NSStackView *_toolbar;
+    BOOL _allowOCR;
+    NSArray<NSButton *> *_tools;
+    NSButton *_undo;
+    NSTextField *_feedback;
+    NSTextField *_textInput;
+    NSPoint _textAnchor;
+    CaptureOutput _output;
+    CGSize _pixels;
+    void (^_begin)(SelectionView *);
+    NSRect _selection;
+    NSRect _initial;
+    NSPoint _anchor;
+    SelectionEdge _edges;
+    BOOL _dragging;
+    BOOL _moving;
+}
+
+- (instancetype)initWithFrame:(NSRect)frame
+                        image:(CGImageRef)image
+                     allowOCR:(BOOL)allowOCR
+                        begin:(void (^)(SelectionView *))begin
+                       output:(CaptureOutput)output {
+    self = [super initWithFrame:frame];
+    if (self) {
+        _desktop = CGImageRetain(image);
+        _background = [[NSImage alloc] initWithCGImage:image size:frame.size];
+        _pixels = CGSizeMake(CGImageGetWidth(image), CGImageGetHeight(image));
+        _begin = [begin copy];
+        _output = [output copy];
+        _marks = [NSMutableArray array];
+        _undoActions = [NSMutableArray array];
+        _allowOCR = allowOCR;
+    }
+    return self;
+}
+
+- (void)dealloc {
+    if (_desktop != NULL) {
+        CGImageRelease(_desktop);
+    }
+    if (_mosaic != NULL) {
+        CGImageRelease(_mosaic);
+    }
+}
+
+- (NSButton *)symbolButton:(NSString *)symbol label:(NSString *)label action:(SEL)action tag:(NSInteger)tag {
+    NSButton *button = [NSButton buttonWithTitle:label target:self action:action];
+    NSImageSymbolConfiguration *configuration = [NSImageSymbolConfiguration
+        configurationWithPointSize:16 weight:NSFontWeightMedium scale:NSImageSymbolScaleMedium];
+    NSImage *image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:label];
+    if (image != nil) {
+        button.image = [image imageWithSymbolConfiguration:configuration];
+        button.imagePosition = NSImageOnly;
+        [button.widthAnchor constraintEqualToConstant:32].active = YES;
+    }
+    [button.heightAnchor constraintEqualToConstant:30].active = YES;
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    button.bezelStyle = NSBezelStyleRecessed;
+    button.tag = tag;
+    button.toolTip = label;
+    button.accessibilityLabel = label;
+    return button;
+}
+
+- (void)setupToolbar:(BOOL)allowOCR {
+    NSMutableArray<NSButton *> *tools = [NSMutableArray array];
+    NSArray<NSArray<NSString *> *> *items = @[
+        @[@"viewfinder", @"选区"], @[@"arrow.up.right", @"箭头"], @[@"rectangle", @"矩形"],
+        @[@"textformat", @"文字"], @[@"square.grid.3x3", @"马赛克"],
+    ];
+    for (NSUInteger i = 0; i < items.count; i++) {
+        NSButton *button = [self symbolButton:items[i][0] label:items[i][1] action:@selector(chooseTool:) tag:i];
+        [button setButtonType:NSButtonTypePushOnPushOff];
+        [tools addObject:button];
+    }
+    _tools = tools;
+    [self setTool:AnnotationSelect];
+    _tools[AnnotationSelect].toolTip = @"拖动选区或已有标注";
+
+    _undo = [self symbolButton:@"arrow.uturn.backward" label:@"撤销" action:@selector(undoLast:) tag:0];
+    _undo.toolTip = @"撤销上一个操作（⌘Z）";
+    NSButton *copy = [self symbolButton:@"square.on.square" label:@"复制并关闭"
+                                 action:@selector(outputFromButton:) tag:DestinationCopy];
+    copy.toolTip = @"复制并关闭（⌘C 或 Return）";
+    copy.contentTintColor = [NSColor colorWithSRGBRed:0.19 green:0.37 blue:0.85 alpha:1];
+    NSButton *save = [self symbolButton:@"arrow.down.to.line" label:@"保存 PNG"
+                                 action:@selector(outputFromButton:) tag:DestinationSave];
+    save.toolTip = @"保存 PNG（⌘S）";
+    NSButton *ocr = [self symbolButton:@"text.viewfinder" label:@"OCR 识别"
+                                action:@selector(outputFromButton:) tag:DestinationOCR];
+    ocr.enabled = allowOCR;
+    ocr.toolTip = allowOCR ? @"OCR 识别选区" : @"安装并启用 OCR 插件后可用";
+    _toolbar = [NSStackView stackViewWithViews:[_tools arrayByAddingObjectsFromArray:@[_undo, copy, save, ocr]]];
+    _toolbar.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    _toolbar.spacing = 2;
+    _toolbar.edgeInsets = NSEdgeInsetsMake(4, 6, 4, 6);
+    _toolbar.wantsLayer = YES;
+    _toolbar.layer.backgroundColor = NSColor.windowBackgroundColor.CGColor;
+    _toolbar.layer.cornerRadius = 8;
+    _toolbar.layer.shadowColor = NSColor.blackColor.CGColor;
+    _toolbar.layer.shadowOpacity = 0.28;
+    _toolbar.layer.shadowRadius = 7;
+    _toolbar.hidden = YES;
+    [self addSubview:_toolbar];
+
+    _feedback = [NSTextField labelWithString:@""];
+    _feedback.hidden = YES;
+    _feedback.backgroundColor = NSColor.windowBackgroundColor;
+    _feedback.drawsBackground = YES;
+    _feedback.alignment = NSTextAlignmentCenter;
+    [self addSubview:_feedback];
+}
+
+- (void)updateToolbar {
+    BOOL hidden = _dragging || CGRectIsNull([self selectionInPixels]);
+    if (_toolbar == nil) {
+        if (hidden) {
+            return;
+        }
+        [self setupToolbar:_allowOCR];
+    }
+    _toolbar.hidden = hidden;
+    _feedback.hidden = _toolbar.hidden || _feedback.stringValue.length == 0;
+    if (_toolbar.hidden) {
+        return;
+    }
+    _undo.enabled = _undoActions.count > 0;
+    NSSize size = _toolbar.fittingSize;
+    CGFloat x = clamp(NSMaxX(_selection) - size.width, 8, MAX(8, NSWidth(self.bounds) - size.width - 8));
+    CGFloat y = NSMaxY(_selection) + 7;
+    if (y + size.height > NSHeight(self.bounds) - 8) {
+        y = MAX(8, NSMinY(_selection) - size.height - 7);
+        if (y < NSMinY(_selection) && y + size.height > NSMinY(_selection)) {
+            y = NSHeight(self.bounds) - size.height - 8;
+        }
+    }
+    _toolbar.frame = NSMakeRect(x, y, size.width, size.height);
+    _feedback.frame = NSMakeRect(x, y >= 30 ? y - 24 : y + size.height + 4, size.width, 20);
+}
+
+- (void)setTool:(AnnotationTool)tool {
+    _tool = tool;
+    _selectedMark = nil;
+    self.needsDisplay = YES;
+    for (NSButton *button in _tools) {
+        BOOL selected = button.tag == tool;
+        button.state = selected ? NSControlStateValueOn : NSControlStateValueOff;
+        button.contentTintColor = selected ? [NSColor colorWithSRGBRed:0.19 green:0.37 blue:0.85 alpha:1] : nil;
+    }
+}
+
+- (void)chooseTool:(NSButton *)button {
+    [self commitText];
+    _feedback.stringValue = @"";
+    [self setTool:button.tag];
+    [self.window makeFirstResponder:self];
+    [self updateToolbar];
+}
+
+- (void)undoLast:(__unused id)sender {
+    [self commitText];
+    dispatch_block_t undo = _undoActions.lastObject;
+    if (undo != nil) {
+        [_undoActions removeLastObject];
+        undo();
+    }
+    if (_selectedMark != nil && ![_marks containsObject:_selectedMark]) {
+        _selectedMark = nil;
+    }
+    _feedback.stringValue = @"";
+    self.needsDisplay = YES;
+    [self updateToolbar];
+    [self.window makeFirstResponder:self];
+}
+
+- (void)addMark:(CaptureAnnotation *)mark {
+    NSMutableArray *marks = _marks;
+    [marks addObject:mark];
+    [_undoActions addObject:^{ [marks removeObjectIdenticalTo:mark]; }];
+}
+
+- (void)beginTextAt:(NSPoint)point {
+    _textAnchor = point;
+    CGFloat width = MIN(250, NSWidth(self.bounds) - 16);
+    _textInput = [[NSTextField alloc] initWithFrame:NSMakeRect(
+        clamp(point.x, 8, NSWidth(self.bounds) - width - 8),
+        clamp(point.y, 8, NSHeight(self.bounds) - 32), width, 24)];
+    _textInput.placeholderString = @"输入文字，回车确认";
+    _textInput.font = [NSFont systemFontOfSize:15];
+    _textInput.usesSingleLineMode = YES;
+    _textInput.delegate = self;
+    [self addSubview:_textInput];
+    [self.window makeFirstResponder:_textInput];
+}
+
+- (void)removeTextInput {
+    NSTextField *field = _textInput;
+    _textInput = nil;
+    [field removeFromSuperview];
+}
+
+- (void)commitText {
+    if (_textInput == nil) {
+        return;
+    }
+    NSText *editor = _textInput.currentEditor;
+    if ([editor isKindOfClass:NSTextView.class]) {
+        [(NSTextView *)editor unmarkText];
+    }
+    NSString *value = [editor.string ?: _textInput.stringValue
+        stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    [self removeTextInput];
+    if (value.length) {
+        CaptureAnnotation *mark = [CaptureAnnotation new];
+        mark.tool = AnnotationText;
+        mark.start = _textAnchor;
+        mark.text = value;
+        [self addMark:mark];
+        self.needsDisplay = YES;
+    }
+    [self updateToolbar];
+}
+
+- (BOOL)control:(NSControl *)control textView:(NSTextView *)editor doCommandBySelector:(SEL)selector {
+    if (selector == @selector(insertNewline:)) {
+        [self commitText];
+    } else if (selector == @selector(cancelOperation:)) {
+        [self removeTextInput];
+    } else {
+        return NO;
+    }
+    [self.window makeFirstResponder:self];
+    return YES;
+}
+
+- (void)outputTo:(CaptureDestination)destination {
+    CGRect pixels = [self selectionInPixels];
+    if (CGRectIsNull(pixels) || _dragging || _movingMark || _draft != nil) {
+        return;
+    }
+    [self commitText];
+    [self.window makeFirstResponder:self];
+    NSData *png = renderCapturePNG(_desktop, pixels, self.bounds.size, _marks, _mosaic);
+    if (png.length == 0) {
+        _feedback.stringValue = @"截图生成失败，请重试";
+    } else if (destination == DestinationOCR && png.length > 4 * 1024 * 1024) {
+        _feedback.stringValue = @"OCR 图片超过 4 MiB，请缩小选区";
+    } else if (png.length > 8 * 1024 * 1024) {
+        _feedback.stringValue = @"截图超过 8 MiB，请缩小选区";
+    } else {
+        _feedback.stringValue = _output(destination, png, self.window) ?: @"";
+    }
+    [self updateToolbar];
+}
+
+- (void)outputFromButton:(NSButton *)button {
+    [self outputTo:button.tag];
+}
+
+- (BOOL)isFlipped { return YES; }
+- (BOOL)acceptsFirstResponder { return YES; }
+- (BOOL)acceptsFirstMouse:(NSEvent *)event { return YES; }
+
+- (void)resetCursorRects {
+    [self addCursorRect:self.bounds cursor:NSCursor.crosshairCursor];
+}
+
+- (CGRect)selectionInPixels {
+    if (NSIsEmptyRect(_selection)) {
+        return CGRectNull;
+    }
+    CGRect rect = pixelRect(_selection, self.bounds.size, _pixels);
+    return rect.size.width >= 2 && rect.size.height >= 2 ? rect : CGRectNull;
+}
+
+- (void)drawHint {
+    NSString *text = @"拖动框选  ·  Esc 取消";
+    NSDictionary *attributes = @{
+        NSFontAttributeName: [NSFont systemFontOfSize:13 weight:NSFontWeightMedium],
+        NSForegroundColorAttributeName: NSColor.whiteColor,
+    };
+    NSSize size = [text sizeWithAttributes:attributes];
+    NSRect bubble = NSMakeRect(NSMidX(self.bounds) - (size.width + 24) / 2,
+                              NSMaxY(self.bounds) - size.height - 32, size.width + 24, size.height + 12);
+    [[NSColor colorWithWhite:0.12 alpha:0.9] setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:bubble xRadius:6 yRadius:6] fill];
+    [text drawAtPoint:NSMakePoint(NSMinX(bubble) + 12, NSMinY(bubble) + 6) withAttributes:attributes];
+}
+
+- (void)drawRect:(NSRect)dirtyRect {
+    [_background drawInRect:self.bounds fromRect:NSZeroRect operation:NSCompositingOperationCopy
+                   fraction:1 respectFlipped:YES hints:nil];
+
+    NSBezierPath *shade = [NSBezierPath bezierPathWithRect:self.bounds];
+    if (!NSIsEmptyRect(_selection)) {
+        [shade appendBezierPathWithRect:_selection];
+    }
+    shade.windingRule = NSWindingRuleEvenOdd;
+    [[NSColor colorWithWhite:0 alpha:0.42] setFill];
+    [shade fill];
+
+    CGRect pixels = [self selectionInPixels];
+    if (CGRectIsNull(pixels)) {
+        [self drawHint];
+        return;
+    }
+
+    CGContextRef context = NSGraphicsContext.currentContext.CGContext;
+    CGContextSaveGState(context);
+    CGContextClipToRect(context, _selection);
+    for (CaptureAnnotation *mark in _marks) {
+        [mark drawInContext:context mosaic:_mosaic bounds:self.bounds];
+    }
+    [_draft drawInContext:context mosaic:_mosaic bounds:self.bounds];
+    if (_selectedMark != nil) {
+        CGFloat dash[] = {4, 3};
+        CGContextSetLineDash(context, 0, dash, 2);
+        CGContextSetRGBStrokeColor(context, 0.19, 0.37, 0.85, 1);
+        CGContextStrokeRectWithWidth(context, NSInsetRect(_selectedMark.bounds, -4, -4), 1);
+    }
+    CGContextRestoreGState(context);
+
+    NSColor *accent = [NSColor colorWithSRGBRed:0.19 green:0.37 blue:0.85 alpha:1];
+    [accent setStroke];
+    [NSBezierPath strokeRect:_selection];
+
+    [accent setFill];
+    for (NSNumber *x in @[@(NSMinX(_selection)), @(NSMaxX(_selection))]) {
+        for (NSNumber *y in @[@(NSMinY(_selection)), @(NSMaxY(_selection))]) {
+            NSRect handle = NSMakeRect(x.doubleValue - 3, y.doubleValue - 3, 6, 6);
+            [[NSBezierPath bezierPathWithRoundedRect:handle xRadius:1 yRadius:1] fill];
+        }
+    }
+
+    NSString *label = [NSString stringWithFormat:@"%.0f × %.0f", pixels.size.width, pixels.size.height];
+    NSDictionary *attributes = @{
+        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:12 weight:NSFontWeightMedium],
+        NSForegroundColorAttributeName: NSColor.whiteColor,
+    };
+    NSSize size = [label sizeWithAttributes:attributes];
+    NSRect badge = NSMakeRect(NSMinX(_selection), NSMinY(_selection) - size.height - 12,
+                              size.width + 12, size.height + 6);
+    badge.origin.x = clamp(badge.origin.x, 0, MAX(0, NSWidth(self.bounds) - NSWidth(badge)));
+    if (badge.origin.y < 0) {
+        badge.origin.y = NSMinY(_selection) + 6;
+    }
+    badge.origin.y = clamp(badge.origin.y, 0, MAX(0, NSHeight(self.bounds) - NSHeight(badge)));
+    [[NSColor colorWithWhite:0.12 alpha:0.9] setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:badge xRadius:4 yRadius:4] fill];
+    [label drawAtPoint:NSMakePoint(NSMinX(badge) + 6, NSMinY(badge) + 3) withAttributes:attributes];
+}
+
+- (SelectionEdge)edgesAtPoint:(NSPoint)point {
+    const CGFloat margin = 6;
+    if (NSIsEmptyRect(_selection) || !NSPointInRect(point, NSInsetRect(_selection, -margin, -margin))) {
+        return EdgeNone;
+    }
+    CGFloat left = fabs(point.x - NSMinX(_selection));
+    CGFloat right = fabs(point.x - NSMaxX(_selection));
+    CGFloat top = fabs(point.y - NSMinY(_selection));
+    CGFloat bottom = fabs(point.y - NSMaxY(_selection));
+    SelectionEdge edges = EdgeNone;
+    if (MIN(left, right) <= margin) {
+        edges |= left <= right ? EdgeLeft : EdgeRight;
+    }
+    if (MIN(top, bottom) <= margin) {
+        edges |= top <= bottom ? EdgeTop : EdgeBottom;
+    }
+    return edges;
+}
+
+- (NSPoint)pointForEvent:(NSEvent *)event {
+    return clampPoint([self convertPoint:event.locationInWindow fromView:nil], self.bounds);
+}
+
+- (void)clearSelection {
+    if (NSIsEmptyRect(_selection) && !_dragging) {
+        return;
+    }
+    _selection = NSZeroRect;
+    _dragging = NO;
+    _draft = nil;
+    [_marks removeAllObjects];
+    [_undoActions removeAllObjects];
+    _movingMark = NO;
+    [self removeTextInput];
+    [self setTool:AnnotationSelect];
+    _feedback.stringValue = @"";
+    [self updateToolbar];
+    self.needsDisplay = YES;
+}
+
+- (void)mouseDown:(NSEvent *)event {
+    _begin(self);
+    [self commitText];
+    [self.window makeFirstResponder:self];
+    NSPoint point = [self pointForEvent:event];
+    if (NSPointInRect(point, _selection) && _tool != AnnotationSelect) {
+        if (_tool == AnnotationText) {
+            [self beginTextAt:point];
+        } else {
+            if (_tool == AnnotationMosaic && _mosaic == NULL) {
+                _mosaic = createMosaicImage(_desktop, self.bounds.size);
+                if (_mosaic == NULL) {
+                    _feedback.stringValue = @"无法生成马赛克，请重试";
+                    [self updateToolbar];
+                    return;
+                }
+            }
+            _draft = [CaptureAnnotation new];
+            _draft.tool = _tool;
+            _draft.start = point;
+            _draft.end = point;
+        }
+        return;
+    }
+    _selectedMark = nil;
+    self.needsDisplay = YES;
+    if (NSPointInRect(point, _selection)) {
+        for (CaptureAnnotation *mark in _marks.reverseObjectEnumerator) {
+            if ([mark hitTest:point]) {
+                _selectedMark = mark;
+                _movingMark = YES;
+                _markInitialStart = mark.start;
+                _markInitialEnd = mark.end;
+                _anchor = point;
+                return;
+            }
+        }
+    }
+    if (event.clickCount == 2 && NSPointInRect(point, _selection)) {
+        [self outputTo:DestinationCopy];
+        return;
+    }
+    _initial = _selection;
+    _anchor = point;
+    _edges = [self edgesAtPoint:point];
+    _moving = _edges == EdgeNone && NSPointInRect(point, _selection);
+    _dragging = YES;
+    if (_edges == EdgeNone && !_moving) {
+        _selection = NSZeroRect;
+        [_marks removeAllObjects];
+        [_undoActions removeAllObjects];
+        [self setTool:AnnotationSelect];
+        self.needsDisplay = YES;
+    }
+    _feedback.stringValue = @"";
+    [self updateToolbar];
+}
+
+- (void)moveByX:(CGFloat)x y:(CGFloat)y {
+    NSRect bounds = self.bounds;
+    _selection.origin.x = clamp(x, NSMinX(bounds), NSMaxX(bounds) - NSWidth(_selection));
+    _selection.origin.y = clamp(y, NSMinY(bounds), NSMaxY(bounds) - NSHeight(_selection));
+}
+
+- (void)mouseDragged:(NSEvent *)event {
+    if (_movingMark) {
+        NSPoint pointer = [self pointForEvent:event];
+        NSPoint target = clampPoint(NSMakePoint(_markInitialStart.x + pointer.x - _anchor.x,
+                                              _markInitialStart.y + pointer.y - _anchor.y), _selection);
+        _selectedMark.start = target;
+        _selectedMark.end = NSMakePoint(_markInitialEnd.x + target.x - _markInitialStart.x,
+                                        _markInitialEnd.y + target.y - _markInitialStart.y);
+        self.needsDisplay = YES;
+        return;
+    }
+    if (_draft != nil) {
+        _draft.end = clampPoint([self pointForEvent:event], _selection);
+        self.needsDisplay = YES;
+        return;
+    }
+    if (!_dragging) {
+        return;
+    }
+    NSPoint point = [self pointForEvent:event];
+    CGFloat dx = point.x - _anchor.x;
+    CGFloat dy = point.y - _anchor.y;
+    if (_moving) {
+        [self moveByX:NSMinX(_initial) + dx y:NSMinY(_initial) + dy];
+    } else if (_edges != EdgeNone) {
+        CGFloat left = NSMinX(_initial), right = NSMaxX(_initial);
+        CGFloat top = NSMinY(_initial), bottom = NSMaxY(_initial);
+        if (_edges & EdgeLeft) left = clamp(left + dx, 0, right - MIN(1, NSWidth(_initial)));
+        if (_edges & EdgeRight) right = clamp(right + dx, left + MIN(1, NSWidth(_initial)), NSWidth(self.bounds));
+        if (_edges & EdgeTop) top = clamp(top + dy, 0, bottom - MIN(1, NSHeight(_initial)));
+        if (_edges & EdgeBottom) bottom = clamp(bottom + dy, top + MIN(1, NSHeight(_initial)), NSHeight(self.bounds));
+        _selection = NSMakeRect(left, top, right - left, bottom - top);
+    } else {
+        _selection = rectBetween(_anchor, point);
+    }
+    self.needsDisplay = YES;
+}
+
+- (void)mouseUp:(NSEvent *)event {
+    [self mouseDragged:event];
+    if (_movingMark) {
+        CaptureAnnotation *mark = _selectedMark;
+        NSPoint start = _markInitialStart, end = _markInitialEnd;
+        if (!NSEqualPoints(mark.start, start)) {
+            [_undoActions addObject:^{ mark.start = start; mark.end = end; }];
+        }
+        _movingMark = NO;
+    }
+    if (_draft != nil) {
+        if ([_draft isValid]) {
+            [self addMark:_draft];
+        }
+        _draft = nil;
+        self.needsDisplay = YES;
+    }
+    _dragging = NO;
+    if (CGRectIsNull([self selectionInPixels])) {
+        [self clearSelection];
+    }
+    [self updateToolbar];
+}
+
+- (void)rightMouseDown:(NSEvent *)event { _output(DestinationCancel, nil, self.window); }
+
+- (BOOL)performKeyEquivalent:(NSEvent *)event {
+    if ((event.modifierFlags & NSEventModifierFlagCommand) && _textInput == nil) {
+        NSString *key = event.charactersIgnoringModifiers.lowercaseString;
+        if ([key isEqualToString:@"c"]) {
+            [self outputTo:DestinationCopy];
+            return YES;
+        }
+        if ([key isEqualToString:@"s"]) {
+            [self outputTo:DestinationSave];
+            return YES;
+        }
+        if ([key isEqualToString:@"z"] && !_dragging && !_movingMark && _draft == nil) {
+            [self undoLast:nil];
+            return YES;
+        }
+    }
+    return [super performKeyEquivalent:event];
+}
+
+- (void)keyDown:(NSEvent *)event {
+    NSString *chars = event.charactersIgnoringModifiers;
+    if (chars.length != 1) {
+        return;
+    }
+    unichar key = [chars characterAtIndex:0];
+    if (key == 0x1b) {
+        _output(DestinationCancel, nil, self.window);
+        return;
+    }
+    if (_dragging || _movingMark || _draft != nil) {
+        return;
+    }
+    if (key == NSCarriageReturnCharacter || key == NSEnterCharacter) {
+        [self outputTo:DestinationCopy];
+        return;
+    }
+    if (CGRectIsNull([self selectionInPixels])) {
+        return;
+    }
+    CGFloat step = (event.modifierFlags & NSEventModifierFlagShift) ? 10 : 1;
+    // Move in image pixels, including on Retina displays.
+    CGFloat dx = step * NSWidth(self.bounds) / _pixels.width;
+    CGFloat dy = step * NSHeight(self.bounds) / _pixels.height;
+    NSPoint origin = _selection.origin;
+    switch (key) {
+        case NSLeftArrowFunctionKey: origin.x -= dx; break;
+        case NSRightArrowFunctionKey: origin.x += dx; break;
+        case NSUpArrowFunctionKey: origin.y -= dy; break;
+        case NSDownArrowFunctionKey: origin.y += dy; break;
+        default: return;
+    }
+    [self moveByX:origin.x y:origin.y];
+    self.needsDisplay = YES;
+    [self updateToolbar];
+}
+@end

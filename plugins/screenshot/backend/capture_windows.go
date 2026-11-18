@@ -28,7 +28,7 @@ func powershell(ctx context.Context, script string) *exec.Cmd {
 	configureProcess(cmd)
 	return cmd
 }
-func capturePlatform(ctx context.Context, path string) error {
+func captureSystemRegion(ctx context.Context, path string) error {
 	cmd := powershell(ctx, selectorScript)
 	cmd.Env = append(os.Environ(), "SINAN_CAPTURE_OUTPUT="+path)
 	if err := cmd.Run(); err != nil {

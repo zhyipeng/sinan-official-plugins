@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
-import {readdirSync} from 'node:fs';
+import {mkdtempSync,readdirSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -14,3 +15,16 @@ run('go',['test','-race','./backend'],join(root,'plugins/calculator'));
 run('go',['test','-race','./backend','./internal/...'],join(root,'plugins/ocr'));
 
 run('go',['test','-race','./backend'],join(root,'plugins/screenshot'));
+
+
+if(process.platform==='darwin'){
+ const native=join(root,'plugins/screenshot/native');
+ const dir=mkdtempSync(join(tmpdir(),'sinan-annotation-tests-'));
+ const executable=join(dir,'annotations');
+ try{
+  run('xcrun',['--sdk','macosx','clang','-fobjc-arc','-Wall','-Wextra','-Werror',
+   '-framework','AppKit','-framework','CoreText','-framework','ImageIO','-framework','UniformTypeIdentifiers',
+   join(native,'tests','annotations.m'),join(native,'overlay-annotations.m'),'-o',executable]);
+  run(executable,[]);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+}

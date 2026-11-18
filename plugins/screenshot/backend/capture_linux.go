@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func capturePlatform(ctx context.Context, path string) error {
+func captureSystemRegion(ctx context.Context, path string) error {
 	if os.Getenv("WAYLAND_DISPLAY") != "" || strings.EqualFold(os.Getenv("XDG_SESSION_TYPE"), "wayland") {
 		if _, err := exec.LookPath("grim"); err != nil {
 			return errors.New("Wayland 区域截图需要 grim 和 slurp，且合成器须支持 screencopy；GNOME/KDE Portal 暂未接入")

@@ -8,31 +8,44 @@ import (
 	"path/filepath"
 )
 
-// Capture files are private and never placed in the package or user screenshot directory.
-func captureRegion(ctx context.Context) ([]byte, error) {
+type captureAction string
+
+const (
+	captureCompleted captureAction = "completed"
+	captureOCR       captureAction = "ocr"
+)
+
+type captureResult struct {
+	data   []byte
+	action captureAction
+}
+
+// Capture files for handoff are private and never placed in the package or user screenshot directory.
+func captureRegion(ctx context.Context, allowOCR bool) (captureResult, error) {
 	dir, err := os.MkdirTemp("", "sinan-capture-")
 	if err != nil {
-		return nil, errors.New("无法创建截图临时目录")
+		return captureResult{}, errors.New("无法创建截图临时目录")
 	}
 	defer os.RemoveAll(dir)
 	path := filepath.Join(dir, "capture.png")
-	if err := capturePlatform(ctx, path); err != nil {
-		return nil, err
+	action, err := capturePlatform(ctx, path, allowOCR)
+	if err != nil || action == captureCompleted {
+		return captureResult{action: action}, err
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, errors.New("已取消截图或未生成图片")
+		return captureResult{}, errors.New("已取消截图或未生成图片")
 	}
 	defer f.Close()
 	info, err := f.Stat()
 	if err != nil || info.Size() > maxImage {
-		return nil, errors.New("截图超过 8 MiB，请缩小选区")
+		return captureResult{}, errors.New("截图超过 8 MiB，请缩小选区")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, errors.New("无法读取截图")
+		return captureResult{}, errors.New("无法读取截图")
 	}
-	return data, nil
+	return captureResult{data: data, action: action}, nil
 }
 func run(ctx context.Context, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
