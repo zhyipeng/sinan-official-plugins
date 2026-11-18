@@ -1,4 +1,4 @@
-//go:build !darwin && !linux && !windows
+//go:build !darwin && !windows
 
 package main
 
@@ -7,6 +7,6 @@ import (
 	"errors"
 )
 
-func captureSystemRegion(context.Context, string) error {
-	return errors.New("当前平台不支持区域截图")
+func capturePlatform(context.Context, string, bool) (captureAction, error) {
+	return "", errors.New("截图插件支持 macOS 和 Windows")
 }

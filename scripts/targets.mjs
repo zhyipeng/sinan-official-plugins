@@ -1,4 +1,5 @@
 export const targets = ['darwin-arm64','darwin-amd64','windows-arm64','windows-amd64','linux-arm64','linux-amd64'];
+export const screenshotTargets = targets.filter(target=>!target.startsWith('linux-'));
 export function hostTarget(){return `${{win32:'windows'}[process.platform]||process.platform}-${{x64:'amd64'}[process.arch]||process.arch}`;}
 export function selectedTargets(args){
  if(!args.length){const target=hostTarget();if(!targets.includes(target))throw new Error("不支持当前构建平台");return [target];}

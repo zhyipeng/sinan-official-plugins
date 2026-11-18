@@ -1,11 +1,12 @@
 // 由 GitHub Actions 的 <plugin-id>-v<version> 标签触发：从 dist/assets.json
-// 中筛选该插件的六目标产物，以草稿创建 Release、上传资产后正式发布。
+// 中筛选该插件的目标产物，以草稿创建 Release、上传资产后正式发布。
 // 只发布 GitHub Release 资产；商店（sinan-plugin-registry）登记仍由人工完成。
 // 本地可用 --dry-run 只校验标签、清单与资产一致性，不调用 gh。
 import {readFile, writeFile, readdir, access} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
+import {targets,screenshotTargets} from './targets.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dry = process.argv.includes('--dry-run');
@@ -43,8 +44,10 @@ if (plugin.directory === 'ocr') {
 }
 
 const assets = JSON.parse(await readFile(path.join(root, 'dist/assets.json'), 'utf8')).filter((asset) => asset.id === pluginId);
-if (assets.length !== 6) {
-  fail(`${pluginId} 产物数量为 ${assets.length}，期望 6（darwin/windows/linux × arm64/amd64），构建不完整。`);
+const expectedTargets = pluginId === 'tools.screenshot' ? screenshotTargets : targets;
+const foundTargets = new Set(assets.map(asset => `${asset.os}-${asset.arch}`));
+if (assets.length !== expectedTargets.length || expectedTargets.some(target => !foundTargets.has(target))) {
+  fail(`${pluginId} 产物不完整，期望 ${expectedTargets.join('、')}。`);
 }
 for (const asset of assets) {
   if (asset.version !== version) fail(`产物 ${asset.file} 版本 ${asset.version} 与标签 ${version} 不一致`);
@@ -60,7 +63,7 @@ const notes = [
   `- 插件 ID：\`${pluginId}\``,
   `- 版本：${version}`,
   '',
-  '## 资产（六目标）',
+  '## 资产',
   '',
   ...assets.map((asset) => `- \`${asset.file}\`（${asset.os}-${asset.arch}，${asset.size} bytes）sha256 \`${asset.sha256}\``),
   '',

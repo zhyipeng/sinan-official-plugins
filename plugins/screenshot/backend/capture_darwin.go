@@ -34,7 +34,7 @@ func capturePlatform(ctx context.Context, path string, allowOCR bool) (captureAc
 		return "", errors.New("已取消截图")
 	case 3:
 		// The helper reports this only on macOS versions without single-frame capture.
-		return "", run(ctx, "/usr/sbin/screencapture", "-i", "-s", "-x", "-t", "png", path)
+		return captureLegacyCopy, run(ctx, "/usr/sbin/screencapture", "-i", "-s", "-x", "-t", "png", path)
 	case 4:
 		return "", errors.New("请在系统设置的隐私与安全性中允许屏幕录制")
 	case 6:

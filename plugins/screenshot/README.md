@@ -1,77 +1,38 @@
 # 截图（tools.screenshot）
 
-已公开发行的 0.1.0 独立官方插件，提供两个搜索入口：
+开发版 0.3.0 面向 macOS 和 Windows，支持 Apple Silicon、Intel x64 和 Windows ARM64。使用「截图」搜索命令或全局快捷键开始。macOS 默认 Command+Shift+A，Windows 默认 Ctrl+Shift+A，可在 Sinan 设置中修改。
 
-- **截图**：隐藏 Sinan 主窗口，直接进入区域选择；完成后自动进入后处理。
-- **截图后处理**：直接打开编辑器；页面的“区域截图”按钮也会隐藏窗口并在完成后自动返回。
+## 遮罩
 
-全局截图热键默认 macOS `Command+Shift+A`、Windows/Linux `Ctrl+Shift+A`，可在司南设置中修改。与搜索“截图”执行相同流程，重复触发进行中的任务会被忽略；系统选区按 Esc 取消。取消、未生成图片或 PNG 无效时直接结束截图并清理临时页面，主窗口保持隐藏；只有得到有效图片才进入后处理。
-后处理使用固定 **Painterro 1.2.92（MIT）**，提供箭头、矩形、椭圆、文字、画笔、区域选择、裁剪、像素化、缩放和撤销重做。文字工具在图片上点击位置后输入，点击确定或 Command/Ctrl+Enter 提交。颜色、粗细、字号、粗体/斜体和描边在工具栏调整；需要先选区再裁剪或像素化。
+- 可在任一显示器开始框选，单个选区限定在开始框选的屏幕。
+- 默认优先匹配光标下的窗口内元素。Tab 切换整窗和元素模式，滚轮切换元素候选。单击采用高亮候选，拖动自由框选。选区可移位、拖边调整或用方向键微调。
+- 遮罩工具栏支持箭头、矩形、文字和马赛克。箭头、矩形和文字可以使用预设色或输入十六进制颜色。用选区工具选中标注后可拖动或改色，支持撤销。
+- 复制或保存后关闭遮罩。OCR 通过可选的 `tools.ocr` 0.3.0 或更新版本识别标注后的 PNG。OCR 无法打开时，可在错误提示中复制本次截图或打开插件中心。
+- Esc 或右键取消，Return 复制。Windows 使用 Ctrl+C、Ctrl+S、Ctrl+Z，macOS 使用 Command 组合键。
 
-Command/Ctrl+Z、Shift+Z 撤销/重做，C 复制图片，S 保存；文字编辑区保留原生编辑快捷键。新截图重置历史；最多 20 次撤销，按原图大小缩减历史帧数，大图仍可能使用较多内存。文字按纯文本处理，最多 2000 个 Unicode 码点、100 行；标注落入像素，不能逐对象再次编辑。
+## 平台
 
-复制按钮为“复制并关闭”，点击或 Command/Ctrl+C 在图片成功写入宿主剪贴板后隐藏所属窗口与主窗口；失败保留窗口，文字输入及选中文本保留原生复制。保存 PNG 由配套宿主校验后调用 Wails 原生保存对话框，支持选择位置；取消不写文件，不再自动保存到系统图片目录。插件不会接收到所选文件路径。
+| 平台 | 实现及边界 |
+| --- | --- |
+| macOS 14+ | ScreenCaptureKit 和 AppKit 原生遮罩。屏幕录制与元素吸附的辅助功能授权由 macOS 管理，元素不可用时可吸附窗口或自由框选。 |
+| macOS 12–13 | 系统区域截图，成功后直接复制到剪贴板。 |
+| Windows 10 1703+ / Windows 11 | 随包分发的 Win32 原生 GUI 程序。各屏以物理像素抓帧，遮罩使用 Per-Monitor DPI v2；UI Automation 在后台查询目标窗口内的元素边界。应用未暴露可用元素或系统限制访问时回退到整窗。 |
+| Linux | 0.3.0 起停止截图插件支持与发行，已发行的 0.1.0 为历史版本。 |
 
-截图命令成功后继续保持隐藏，待页面读取、解码 PNG 并载入编辑器后再显示后处理；取消、无文件、空图、坏 PNG 以及页面解码失败均保持隐藏。隐藏页面未启动截图时超时清理，不再打开空编辑器。
+原图限单屏 3200 万像素、全部屏幕合计 9600 万像素。PNG 复制与保存上限 8 MiB，OCR 交接上限 4 MiB。原生进程仅将 OCR 图片或旧版 macOS 截图暂存到私有临时目录。宿主版本须为 0.4.0 或更新，复用现有剪贴板、隐藏任务和插件交接能力。
 
-## 平台与权限
+0.3.0 移除了独立的「截图后处理」入口及其图片编辑、导入和粘贴流程。正常截图的标注、保存和复制均在原生遮罩内完成。
 
-| 平台 | 捕获实现 | 依赖和限制 |
-| --- | --- | --- |
-| macOS | 14+ 使用 ScreenCaptureKit 和 AppKit 自定义选区；旧版使用 `/usr/sbin/screencapture -i -s` | 需要系统屏幕录制授权；可在任一显示器开始框选，单次选区限定于开始拖动的屏幕；授权归属、焦点以及多屏布局待实机验收 |
-| Windows | 系统 Windows PowerShell 5.1 + WinForms/GDI 选区覆盖层 | 不要求安装第三方模块；使用线程 DPI 感知，虚拟屏幕含负坐标；整个桌面超过 3200 万像素时拒绝；PowerShell 被组织策略禁止、无交互桌面、混合 DPI、HDR 等待验收 |
-| Linux X11 | `scrot --select --freeze` | 需要 DISPLAY 及支持上述参数的 scrot |
-| Linux Wayland | slurp 选区 + grim 捕获 | 仅支持具备 screencopy/layer-shell 的合成器；GNOME/KDE 的 Portal 选区未接入，不能宣称通用 Wayland 支持 |
-
-macOS 14+ 下按一次快捷键即可在任一显示器拖动框选，松手后可拖动选区内部移动、拖动边角调整大小，方向键微调 1 像素，Shift + 方向键微调 10 像素。框选后可在遮罩上直接画箭头、矩形、文字和马赛克，或撤销上一次添加或移动。切回「选区」工具后，拖动现有文字、箭头、矩形或马赛克可重新定位。在另一块屏重新框选会清除原选区。Return、在选区工具下双击、Command+C 或点击「复制」会复制 PNG 并关闭。Command+S 或点击「保存」打开原生保存面板，取消保存会回到遮罩。Esc 或右键取消截图。
-
-遮罩工具栏使用统一的 macOS 线性图标，悬停可查看工具名称和快捷键。点击标注颜色色块可用预设或输入六位十六进制颜色，箭头、矩形和文字共用该设置。使用选区工具选中已有标注后也可改色，并可撤销本次改色。已授予 macOS 辅助功能权限时，截图默认使用元素吸附。滚轮可切换光标下的元素及上级范围，Tab 可切换到整窗吸附。未授权时默认使用整窗吸附，按 Tab 请求授权。应用没有提供元素边界时，也会使用窗口边界。单击选中高亮区域，拖动可自由框选。跨屏窗口和元素只选取当前屏幕上的部分。
-
-可从遮罩打开 OCR，单张 PNG 上限 4 MiB。依赖不可用时显示原因及插件中心入口，交接失败时编辑器保留标注后的 PNG。独立的「截图后处理」仍支持导入和粘贴已有图片。
-
-需要 API 1 / UI Bridge 2、`clipboard.v1` 、`ui.window-execute.v1` 及 `ui.image-output.v1` 配套宿主；已发布 0.3.1 不具备新能力，不能安装在旧宿主上。manifest 使用 startHidden 及视图级 window.execute/window.show/window.hide/file.savePNG 权限，SDK 快照以原来源提交加显式补丁追溯。Linux 复制仍需要宿主对应 X11 xclip 或 Wayland wl-clipboard。manifest 后台权限仅声明现有 `clipboard.write`，不伪造截图权限字段；原生进程直接使用当前用户系统权限，独立进程不构成安全沙箱。安装必须信任原生插件。
-
-## 数据与生命周期
-
-macOS 遮罩快照限制单屏 3200 万像素、所有显示器合计 9600 万像素。原图和导出 PNG 限制 8 MiB、3200 万像素，每块原始字节 36 KiB，通过现有 command.execute 传输，不放宽 64 KiB 请求及 192 KiB 页面响应预算，不修改 CSP。页面用 Blob + createImageBitmap 解码并绘制 Canvas，不加载 data/blob URL。图像仅在内存及私有临时目录中处理，临时文件在捕获返回时删除；进程被系统强杀时不能保证临时文件清理。截图失败保留上一张原图和标注，不自动保存历史。
-
-每插件最多一个原生选区任务，2 分钟硬预算，宿主持有最长 125 秒的隐藏执行请求，后台 Go 保持私有截图租约；15 秒无活动回收任务和上传缓存。页面退出主动取消，宿主关闭 stdio 后插件取消并等待直接捕获子进程结束；未扩展宿主对任意后代进程的回收能力。截图期间不依赖隐藏页面计时器；任务结束后宿主只恢复原活动会话窗口，撤销或替换不会唤回旧页面。
-
-## 构建和验证
+## 开发构建
 
 ```text
 node scripts/build-screenshot.mjs
 node scripts/build-screenshot.mjs --all
-npm test
 python3 scripts/check-screenshot.py
 ```
 
-输出在 `bin/targets/<os>-<arch>/screenshot`。macOS 目标（包括 `--all`）须在安装 Xcode 命令行工具及 macOS 14 或更新 SDK 的 Mac 上构建，包内 `backend/capture-macos` 与 Go 后端使用同一架构。已接入通用 build、test、package 与三平台手动 CI；源码和交叉构建不代表真实系统支持或正式发行。包由通用打包器核验 Mach-O/PE/ELF 与 .exe 入口，Windows 后台使用 GUI 子系统。
+macOS 目标需要 Xcode 命令行工具及 macOS 14 或更新 SDK。从 macOS 或 Windows 构建 Windows 辅助程序时，脚本使用按 SHA-256 固定的 LLVM-MinGW，首次构建需要 Python 3.12 和网络。已有该工具链时可设置 `SINAN_SCREENSHOT_LLVM_MINGW` 指向其目录。Windows 插件的运行不依赖开发工具链。
 
-本轮在 macOS arm64 通过 121 项 JS、11 项 Python、五个后台竞态检查、截图六目标构建/静态检查及通用打包；具体结果见宿主仓库 `docs/adr/0076-hidden-window-commands.md`。未读取真实屏幕/系统剪贴板、触发授权或启动原生窗口/浏览器；Windows/Linux 原生工具执行、三端 WebView/焦点/多屏/DPI 均未实机验收。当时尚未发行；最终发行见下方记录，未修改现有安装。
+开发版在 macOS arm64 通过无界面回归和模拟 Host API 的 stdio 测试，macOS/Windows 两架构均已构建并打包。Windows 原生测试程序的实际执行和桌面行为仍待目标系统验证。
 
-## Painterro 私有适配
-
-不使用 CDN、运行时 style 元素、字体、dom-to-image、data/blob 图片 URL 或组件自带原生剪贴板入口。构建从原包源码生成静态样式、DOM SVG 图标和 Canvas 文字渲染，原图直接由 ImageBitmap 绘入 Canvas；文件/URL 打开、图片粘贴拼接、尺寸扩展和滤镜入口未开放。复制/保存仍通过原有受控桥，宿主 CSP、资源类型与调用预算不变。原包来源和文件摘要记录在 painterro-upstream.json，构建补丁在 scripts/painterro-csp.mjs，包内含完整 MIT 许可。
-
-本轮 127 项 JS、11 项 Python 与五个后台竞态检查通过；六目标构建、通用打包、宿主严格 UI 资源加载和包校验通过。实际组件在 linkedom/模拟 Canvas 中验证，不是浏览器或 WebView 实机验收。界面 4 个资源、149,935 字节；仍须配套本轮支持 ui.window-execute.v1 的宿主，已发布 v0.3.1 不支持。三端中文输入、CSP/图标、焦点和多屏/DPI 未实机验证，当时尚未发行；最终发行见下方记录，未修改现有安装。
-
-## 导入与粘贴图片
-
-截图后处理可直接点击“导入图片”，使用宿主 Wails 原生选择对话框打开 PNG、JPEG 或 GIF（首帧）；也可在非文字编辑区域按 macOS Command+V / Windows、Linux Ctrl+V 粘贴剪贴板图片。无需先截图，新图成功载入后进入相同编辑器。取消、剪贴板无图或图片解码失败保留当前内容，文字输入区域保留普通文本粘贴。
-
-需配套支持 ui.image-input.v1 的本轮新宿主，新增视图 file.openImage/clipboard.read 权限，旧宿主不支持。源文件上限 8 MiB、1600 万像素，宿主转为最多 4 MiB PNG 快照；剪贴板图片沿用 4 MiB/1600 万像素限制。文件路径不进入插件页面，页面只读取当前会话的私有资源 URL。支持独立导入及原生 paste 事件的无界面用例已添加，三端真实文件选择、WebView 和剪贴板交互尚未验收。
-
-## OCR 页面交接
-
-后处理增加“OCR 识别”，导出当前编辑结果并在原窗口跳转 OCR 自动识别；成功后释放截图编辑历史，目标未准备成功则保留原页面。依赖 tools.ocr ≥ 0.3.0 的 recognize-image v1 公开入口，属于可选依赖；未安装、禁用或版本不足只影响 OCR，并提供前往插件中心入口（进入插件中心会离开当前页面）。已发布 OCR 0.2.0 不满足公开入口要求。
-
-需支持 ui.plugin-handoff.v1 的本轮新宿主；图片暂存不经过系统剪贴板或文件路径，交接 PNG 限 4 MiB/1600 万像素，超出先裁剪。上传采用独立有界数据帧预算，句柄绑定源会话与目标入口，撤销和超时清理。截图 0.1.0 与 OCR 0.3.0 均已公开发行，旧版记录不变。
-
-发行兼容基线：Sinan 0.4.0（真实提供 ui.plugin-handoff.v1）；SDK 直接来自该配套宿主源码提交，商店登记以实际发行资产为准。
-
-## 发行结果
-
-[0.1.0 六目标发行](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.1.0)已完成，最低宿主 Sinan 0.4.0，可选 OCR ≥ 0.3.0。[发布流水线](https://github.com/zhyipeng/sinan-official-plugins/actions/runs/44070601312)通过，六份 ZIP 已回下载核对版本、依赖、原生入口/架构、大小、SHA-256 和图标一致性。真实截图、WebView 和权限交互尚未实机验收。
-
-开发版 0.2.0 增加 macOS 多显示器遮罩、遮罩内标注和直接输出，最低宿主仍为 Sinan 0.4.0，尚待实机验收与发行。
+[0.1.0 历史发行](https://github.com/zhyipeng/sinan-official-plugins/releases/tag/tools.screenshot-v0.1.0)

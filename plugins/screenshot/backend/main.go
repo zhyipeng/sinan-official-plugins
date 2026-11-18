@@ -30,29 +30,28 @@ type snapshot struct {
 	Error  string        `json:"error,omitempty"`
 	Size   int           `json:"size,omitempty"`
 	Data   string        `json:"data,omitempty"`
-	Path   string        `json:"path,omitempty"`
 }
+
 type service struct {
-	closed   bool
-	workers  sync.WaitGroup
-	mu       sync.Mutex
-	job      snapshot
-	image    []byte
-	upload   []byte
-	uploadID string
-	touched  time.Time
-	cancel   context.CancelFunc
-	capture  func(context.Context, bool) (captureResult, error)
-	write    func(context.Context, []byte) error
+	closed  bool
+	mu      sync.Mutex
+	workers sync.WaitGroup
+	cancel  context.CancelFunc
+	expiry  *time.Timer
+	jobID   string
+	image   []byte
+	capture func(context.Context, bool) (captureResult, error)
+	write   func(context.Context, []byte) error
 }
 
 func identifier() string {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		panic("无法生成任务标识")
+	var value [16]byte
+	if _, err := rand.Read(value[:]); err != nil {
+		panic("无法生成截图任务标识")
 	}
-	return hex.EncodeToString(b[:])
+	return hex.EncodeToString(value[:])
 }
+
 func validateImage(data []byte) error {
 	if len(data) == 0 || len(data) > maxImage {
 		return errors.New("PNG 图片超过 8 MiB 限制或内容为空")
@@ -61,92 +60,82 @@ func validateImage(data []byte) error {
 	if err != nil || cfg.Width < 1 || cfg.Height < 1 || int64(cfg.Width)*int64(cfg.Height) > 32_000_000 {
 		return errors.New("PNG 图片无效或超过 3200 万像素")
 	}
-	// Validate the compressed stream before handing it to the clipboard or saving it.
-	_, err = png.Decode(bytes.NewReader(data))
-	if err != nil {
+	if _, err = png.Decode(bytes.NewReader(data)); err != nil {
 		return errors.New("PNG 图片数据损坏")
 	}
 	return nil
 }
-func (s *service) start(allowOCR bool) (snapshot, error) {
+
+func (s *service) clearImage() {
+	if s.expiry != nil {
+		s.expiry.Stop()
+		s.expiry = nil
+	}
+	s.image = nil
+	s.jobID = ""
+}
+
+func (s *service) captureForView(ctx context.Context, allowOCR bool) (snapshot, error) {
+	s.mu.Lock()
+	if s.closed || s.cancel != nil {
+		s.mu.Unlock()
+		return snapshot{}, errors.New("截图任务不可用或已有截图正在进行")
+	}
+	s.clearImage()
+	captureCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	s.cancel = cancel
+	s.workers.Add(1)
+	s.mu.Unlock()
+	defer s.workers.Done()
+	defer cancel()
+
+	result, err := s.capture(captureCtx, allowOCR)
+	if err == nil && result.action != captureCompleted {
+		err = validateImage(result.data)
+	}
+	if err == nil && result.action == captureLegacyCopy {
+		err = s.write(captureCtx, result.data)
+		result = captureResult{action: captureCompleted}
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.closed {
-		return snapshot{}, errors.New("插件正在退出")
+	s.cancel = nil
+	if err != nil {
+		return snapshot{}, err
 	}
-	if s.job.State == "running" {
-		return snapshot{}, errors.New("已有截图正在进行")
+	if captureCtx.Err() != nil || s.closed {
+		return snapshot{}, errors.New("截图任务已撤销")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	s.cancel = cancel
-	s.image = nil
-	s.upload = nil
-	s.uploadID = ""
-	s.touched = time.Now()
+	if result.action == captureCompleted {
+		return snapshot{State: "done", Action: captureCompleted}, nil
+	}
+	if result.action != captureOCR || !allowOCR {
+		return snapshot{}, errors.New("截图结果无效")
+	}
 	id := identifier()
-	s.job = snapshot{ID: id, State: "running"}
-	s.workers.Add(1)
-	go func() {
-		defer s.workers.Done()
-		defer cancel()
-		result, err := s.capture(ctx, allowOCR)
-		if err == nil && result.action != captureCompleted {
-			err = validateImage(result.data)
-		}
+	s.jobID, s.image = id, result.data
+	s.expiry = time.AfterFunc(2*time.Minute, func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		if s.job.ID != id || s.job.State != "running" {
-			return
+		if s.jobID == id {
+			s.clearImage()
 		}
-		if err != nil {
-			s.job.State = "failed"
-			s.job.Error = err.Error()
-			return
-		}
-		s.image = result.data
-		s.job.State = "done"
-		s.job.Size = len(result.data)
-		s.job.Action = result.action
-	}()
-	return s.job, nil
+	})
+	return snapshot{ID: id, State: "done", Action: captureOCR, Size: len(result.data)}, nil
 }
-func (s *service) clear() {
-	if s.cancel != nil {
-		s.cancel()
-	}
-	s.job = snapshot{}
-	s.image = nil
-	s.upload = nil
-	s.uploadID = ""
-}
-func (s *service) maintain(ctx context.Context) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			s.mu.Lock()
-			s.closed = true
-			s.clear()
-			s.mu.Unlock()
-			return
-		case <-ticker.C:
-			s.mu.Lock()
-			if !s.touched.IsZero() && time.Since(s.touched) > 15*time.Second {
-				s.clear()
-			}
-			s.mu.Unlock()
-		}
-	}
-}
+
 func (s *service) command(ctx context.Context, p protocol.CommandParams) (protocol.CommandResult, error) {
-	v, err := s.execute(ctx, p)
+	value, err := s.execute(ctx, p)
 	if err != nil {
-		v = snapshot{State: "failed", Error: err.Error()}
+		value = snapshot{State: "failed", Error: err.Error()}
 	}
-	data, err := json.Marshal(v)
-	return protocol.CommandResult{Text: string(data), Dismiss: p.CommandID == "capture-region" && (v.State != "done" || v.Size <= 0), KeepHidden: p.CommandID == "capture-region" && v.State == "done" && v.Size > 0}, err
+	data, err := json.Marshal(value)
+	handoff := value.State == "done" && value.Action == captureOCR
+	hiddenCapture := p.CommandID == "capture-region"
+	return protocol.CommandResult{Text: string(data), Dismiss: hiddenCapture && !handoff, KeepHidden: hiddenCapture && handoff}, err
 }
+
 func (s *service) execute(ctx context.Context, p protocol.CommandParams) (snapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return snapshot{}, err
@@ -157,145 +146,60 @@ func (s *service) execute(ctx context.Context, p protocol.CommandParams) (snapsh
 		}
 		return s.captureForView(ctx, p.Input == "ocr")
 	}
-	if p.CommandID == "start" {
-		if p.Input != "" {
-			return snapshot{}, errors.New("截图不接受外部参数")
-		}
-		return s.start(false)
-	}
+
+	id, offsetText, _ := strings.Cut(p.Input, ":")
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.closed {
-		return snapshot{}, errors.New("插件正在退出")
+	if id == "" || id != s.jobID || s.closed {
+		return snapshot{}, errors.New("截图已过期")
 	}
-	s.touched = time.Now()
 	switch p.CommandID {
-	case "poll":
-		if p.Input != s.job.ID || p.Input == "" {
-			return snapshot{}, errors.New("截图任务已过期")
-		}
-		return s.job, nil
 	case "cancel":
-		if p.Input == s.job.ID && p.Input != "" {
-			s.clear()
-		}
+		s.clearImage()
 		return snapshot{State: "cancelled"}, nil
 	case "read":
-		parts := strings.Split(p.Input, ":")
-		if len(parts) != 2 || parts[0] != s.job.ID || s.job.State != "done" {
-			return snapshot{}, errors.New("截图任务已过期")
-		}
-		offset, err := strconv.Atoi(parts[1])
+		offset, err := strconv.Atoi(offsetText)
 		if err != nil || offset < 0 || offset >= len(s.image) {
 			return snapshot{}, errors.New("图片偏移无效")
 		}
 		end := min(offset+chunkSize, len(s.image))
 		return snapshot{Data: base64.StdEncoding.EncodeToString(s.image[offset:end])}, nil
-	case "upload-start":
-		if p.Input != "" {
-			return snapshot{}, errors.New("上传不接受外部参数")
-		}
-		s.upload = nil
-		s.uploadID = identifier()
-		return snapshot{ID: s.uploadID}, nil
-	case "upload":
-		parts := strings.SplitN(p.Input, ":", 3)
-		if len(parts) != 3 || parts[0] != s.uploadID || s.uploadID == "" {
-			return snapshot{}, errors.New("图片上传已过期")
-		}
-		offset, err := strconv.Atoi(parts[1])
-		if err != nil || offset != len(s.upload) {
-			return snapshot{}, errors.New("图片分块顺序无效")
-		}
-		data, err := base64.StdEncoding.Strict().DecodeString(parts[2])
-		if err != nil || len(data) == 0 || len(data) > chunkSize || len(s.upload)+len(data) > maxImage {
-			return snapshot{}, errors.New("图片分块无效或超过 8 MiB")
-		}
-		s.upload = append(s.upload, data...)
-		return snapshot{Size: len(s.upload)}, nil
-	case "save":
-		parts := strings.Split(p.Input, ":")
-		if len(parts) != 2 || parts[0] == "" || parts[0] != s.uploadID {
-			return snapshot{}, errors.New("图片上传已过期")
-		}
-		if err := validateImage(s.upload); err != nil {
-			return snapshot{}, err
-		}
-		offset, err := strconv.Atoi(parts[1])
-		if err != nil || offset < 0 || offset >= len(s.upload) {
-			return snapshot{}, errors.New("图片偏移无效")
-		}
-		return snapshot{Size: len(s.upload), Data: base64.StdEncoding.EncodeToString(s.upload[offset:min(offset+chunkSize, len(s.upload))])}, nil
 	case "copy":
-		if p.Input == "" || p.Input != s.uploadID {
-			return snapshot{}, errors.New("图片上传已过期")
+		if err := s.write(ctx, s.image); err != nil {
+			return snapshot{}, errors.New("复制失败，请重试")
 		}
-		if err := validateImage(s.upload); err != nil {
-			return snapshot{}, err
-		}
-		if err := s.write(ctx, s.upload); err != nil {
-			return snapshot{}, errors.New("复制失败，请检查宿主剪贴板权限与系统服务")
-		}
-		s.upload = nil
-		s.uploadID = ""
+		s.clearImage()
 		return snapshot{State: "done"}, nil
+	default:
+		return snapshot{}, errors.New("不支持的命令")
 	}
-	return snapshot{}, errors.New("不支持的命令")
 }
+
 func main() {
 	var host *sdk.HostClient
 	s := &service{capture: captureRegion, write: func(ctx context.Context, data []byte) error {
 		return host.ClipboardWrite(ctx, protocol.ClipboardContent{Kind: "image", Data: data})
 	}}
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() { s.maintain(ctx); close(done) }()
 	err := sdk.ServeWithHandlers(os.Stdin, os.Stdout, "tools.screenshot", sdk.Handlers{
 		HostReady: func(h *sdk.HostClient) { host = h },
 		Initialize: func(p protocol.InitializeParams) error {
-			if !slices.Contains(p.HostCapabilities, protocol.ClipboardCapability) || !slices.Contains(p.HostCapabilities, protocol.WindowExecuteCapability) || !slices.Contains(p.HostCapabilities, protocol.ImageOutputCapability) || !slices.Contains(p.HostCapabilities, protocol.ImageInputCapability) || !slices.Contains(p.HostCapabilities, protocol.PluginHandoffCapability) {
-				return errors.New("请使用支持 clipboard.v1、ui.window-execute.v1 、ui.image-output.v1 、ui.image-input.v1 和 ui.plugin-handoff.v1 的配套宿主（已发布 0.3.1 不支持）")
+			if !slices.Contains(p.HostCapabilities, protocol.ClipboardCapability) ||
+				!slices.Contains(p.HostCapabilities, protocol.WindowExecuteCapability) ||
+				!slices.Contains(p.HostCapabilities, protocol.PluginHandoffCapability) {
+				return errors.New("截图插件需要 Sinan 0.4.0 或更新版本")
 			}
 			return nil
 		}, Command: s.command})
-	cancel()
-	<-done
+
+	s.mu.Lock()
+	s.closed = true
+	if s.cancel != nil {
+		s.cancel()
+	}
+	s.clearImage()
+	s.mu.Unlock()
 	s.workers.Wait()
 	if err != nil {
 		os.Exit(1)
-	}
-}
-
-// The host owns hiding and restoration; keep the private task lease alive while
-// waiting on a cancellable stdio command, without polling the hidden WebView.
-func (s *service) captureForView(ctx context.Context, allowOCR bool) (snapshot, error) {
-	first, err := s.start(allowOCR)
-	if err != nil {
-		return snapshot{}, err
-	}
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		s.mu.Lock()
-		if s.job.ID != first.ID {
-			s.mu.Unlock()
-			return snapshot{}, errors.New("截图任务已取消或过期")
-		}
-		value := s.job
-		s.touched = time.Now()
-		s.mu.Unlock()
-		if value.State != "running" {
-			return value, nil
-		}
-		select {
-		case <-ctx.Done():
-			s.mu.Lock()
-			if s.job.ID == first.ID {
-				s.clear()
-			}
-			s.mu.Unlock()
-			return snapshot{}, ctx.Err()
-		case <-ticker.C:
-		}
 	}
 }

@@ -28,11 +28,11 @@ def verify_native(data, os, arch, library=False):
         assert struct.unpack_from("<H", data, 16)[0] in ((3,) if library else (2, 3)), "ELF 文件类型不符"
 
 
-def verify_ocr_consoleless(data):
+def verify_consoleless(data):
     offset = struct.unpack_from("<I", data, 60)[0]
-    assert offset + 94 <= len(data), "OCR PE 可选头无效"
-    assert struct.unpack_from("<H", data, offset + 24)[0] == 0x20B, "OCR 需要 PE32+"
-    assert struct.unpack_from("<H", data, offset + 24 + 68)[0] == 2, "OCR 后台/worker 必须使用无控制台子系统"
+    assert offset + 94 <= len(data), "PE 可选头无效"
+    assert struct.unpack_from("<H", data, offset + 24)[0] == 0x20B, "原生包需要 PE32+"
+    assert struct.unpack_from("<H", data, offset + 24 + 68)[0] == 2, "后台与辅助程序必须使用无控制台子系统"
 
 
 def package(source, output, os, arch):
@@ -45,12 +45,10 @@ def package(source, output, os, arch):
     else:
         assert manifest["runtime"]["kind"] == "declarative" and not (source / "backend").exists(), "声明式包不能混入后端"
     if manifest["id"] == "tools.screenshot":
-        helper = source / "backend" / "capture-macos"
-        if os == "darwin":
-            assert helper.is_file() and not helper.is_symlink(), "macOS 截图包缺少原生选区组件"
-            verify_native(helper.read_bytes(), os, arch)
-        else:
-            assert not helper.exists(), "仅 macOS 截图包可包含原生选区组件"
+        assert os in ("darwin", "windows"), "截图插件仅支持 macOS 和 Windows"
+        helper = source / "backend" / ("capture-macos" if os == "darwin" else "capture-windows.exe")
+        assert helper.is_file() and not helper.is_symlink(), "截图包缺少原生选区组件"
+        verify_native(helper.read_bytes(), os, arch)
     files = list(source.rglob("*"))
     assert len(files) <= 2048 and sum(f.stat().st_size for f in files if f.is_file()) <= 64 << 20, "插件解压内容超过宿主预算"
     output.mkdir(parents=True, exist_ok=True)
@@ -70,8 +68,8 @@ def package(source, output, os, arch):
                 )
                 if executable:
                     verify_native(payload, os, arch)
-                    if manifest["id"] == "tools.ocr" and os == "windows":
-                        verify_ocr_consoleless(payload)
+                    if manifest["id"] in ("tools.ocr", "tools.screenshot") and os == "windows":
+                        verify_consoleless(payload)
                 elif library and manifest["id"] == "tools.ocr":
                     verify_native(payload, os, arch, library=True)
                 # Identical pure frontend packages have identical bytes on every OS.
@@ -141,6 +139,8 @@ def main():
         assets.append(package(source, output, os, arch))
     current_screenshot = json.loads((ROOT / "plugins/screenshot/manifest.json").read_text(encoding="utf-8"))
     for os, arch in TARGETS:
+        if os == "linux":
+            continue
         source = ROOT / "bin/targets" / f"{os}-{arch}" / "screenshot"
         if not source.exists():
             continue

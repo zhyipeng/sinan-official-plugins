@@ -82,7 +82,7 @@ def validate_target(directory, target, version):
             payload = package.read(name)
             packaging.verify_native(payload, os_name, arch)
             if os_name == "windows":
-                packaging.verify_ocr_consoleless(payload)
+                packaging.verify_consoleless(payload)
             assert package.getinfo(name).external_attr >> 16 & 0o111
         for name in names:
             if name.endswith((".dll", ".dylib", ".so")) or ".so." in name:

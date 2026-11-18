@@ -95,6 +95,6 @@ class OCRConsoleTest(unittest.TestCase):
         data=bytearray(executable("windows","amd64"));data.extend(bytes(128))
         struct.pack_into("<H",data,64+24,0x20B)
         struct.pack_into("<H",data,64+24+68,2)
-        packaging.verify_ocr_consoleless(data)
+        packaging.verify_consoleless(data)
         struct.pack_into("<H",data,64+24+68,3)
-        with self.assertRaises(AssertionError):packaging.verify_ocr_consoleless(data)
+        with self.assertRaises(AssertionError):packaging.verify_consoleless(data)

@@ -11,8 +11,9 @@ import (
 type captureAction string
 
 const (
-	captureCompleted captureAction = "completed"
-	captureOCR       captureAction = "ocr"
+	captureCompleted  captureAction = "completed"
+	captureLegacyCopy captureAction = "legacy-copy"
+	captureOCR        captureAction = "ocr"
 )
 
 type captureResult struct {
@@ -49,7 +50,6 @@ func captureRegion(ctx context.Context, allowOCR bool) (captureResult, error) {
 }
 func run(ctx context.Context, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
-	configureProcess(cmd)
 	// Do not forward native output (it may include private paths) to RPC stdout.
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
