@@ -30,7 +30,7 @@ if(targets.some(target=>target.startsWith('windows-'))){
  toolchain=process.env.SINAN_SCREENSHOT_LLVM_MINGW;
  if(!toolchain){
   const python=process.platform==='win32'?'python':'python3';
-  toolchain=run(python,[join(root,'scripts/prepare-screenshot-toolchain.py'),join(root,'bin/toolchains')],{
+  toolchain=run(python,['-X','utf8',join(root,'scripts/prepare-screenshot-toolchain.py'),join(root,'bin/toolchains')],{
    stdio:['ignore','pipe','inherit'],encoding:'utf8',
   }).trim();
  }

@@ -43,7 +43,7 @@ func main() {
     data = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 512, 512, 8, 6, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
     (root / "fixture.png").write_bytes(data)
-    process = subprocess.Popen([entry], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    process = subprocess.Popen([entry], stdin=subprocess.PIPE, stdout=subprocess.PIPE, encoding="utf-8")
     request_id = writes = 0
 
     def send(value):
