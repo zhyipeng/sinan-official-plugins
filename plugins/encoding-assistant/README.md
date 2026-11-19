@@ -17,4 +17,4 @@
 - `npm run build:encoding-assistant` 输出 `bin/plugins/encoding-assistant`，可从司南插件中心导入该目录。`npm run package:all` 通过官方打包脚本生成六目标本地 ZIP。
 - 宿主使用 API 1、UI Bridge 2，需具备输入匹配、会话图片、视图剪贴板及 `ui.image-input.v1`，以具备这些能力的司南 0.4.0 为基线。视图按用途分别声明 `storage`、`clipboard.write`、`clipboard.read` 和 `file.openImage`，无原生后端。
 - 构建包内置 QR 和 Hash 依赖及许可，无 CDN。二维码编码限制 2300 UTF-8 字节；解码画布最长边限制 2048 像素，原图中的二维码太小时建议先裁剪。选图和粘贴沿用宿主格式、大小及资源限制。
-- 构建目标覆盖 macOS/WKWebView、Windows/WebView2、Linux/WebKitGTK 的现有隔离视图。包相同不等于运行验收；各平台真实 Canvas 图片解码、系统选图、剪贴板、主题、键盘和输入法交互（Linux 区分 X11/Wayland）尚待实机验证。未发布，也未登记商店。
+- 构建目标覆盖 macOS/WKWebView、Windows/WebView2、Linux/WebKitGTK 的现有隔离视图。包相同不等于运行验收；各平台真实 Canvas 图片解码、系统选图、剪贴板、主题、键盘和输入法交互（Linux 区分 X11/Wayland）尚待实机验证。正式版本见 GitHub Releases，尚未登记商店。

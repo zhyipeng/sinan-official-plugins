@@ -151,4 +151,4 @@ JSON 工具 0.4.4、剪贴板 0.1.2、翻译 0.3.1、日历 0.1.3 使用统一�
 
 ## 编码助手
 
-[编码助手](plugins/encoding-assistant/README.md) 提供时间转换、Base64、UUID、Hash 和二维码五个搜索入口；时间、网址和图片也可通过内容触发。所有转换均离线进行。运行 `npm run build:encoding-assistant` 可构建本地安装目录；已纳入标准打包和平台检查，尚未发布。
+[编码助手](plugins/encoding-assistant/README.md) 提供时间转换、Base64、UUID、Hash 和二维码五个搜索入口；时间、网址和图片也可通过内容触发。所有转换均离线进行。运行 `npm run build:encoding-assistant` 可构建本地安装目录；已纳入标准打包和平台检查。
